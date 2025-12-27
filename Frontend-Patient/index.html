@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="MediCare Pro - Advanced Hospital Management System with AI Voice Assistant">
+    <meta name="keywords" content="hospital, healthcare, medical, appointment, AI, voice assistant">
+    <meta name="author" content="MediCare Pro">
+    
+    <title>MediCare Pro | Modern Hospital Management</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/hospital-icon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Theme color -->
+    <meta name="theme-color" content="#667eea" />
+    
+    <!-- Open Graph tags -->
+    <meta property="og:title" content="MediCare Pro Hospital Management System">
+    <meta property="og:description" content="Experience world-class healthcare with AI-powered voice assistance">
+    <meta property="og:image" content="/og-image.jpg">
+    <meta property="og:url" content="https://medicarepro.com">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    
+    <script>
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        console.warn('Speech recognition not supported in this browser');
+      }
+    </script>
+  </body>
+</html>

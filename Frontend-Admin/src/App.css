@@ -1,0 +1,49 @@
+/* Import component styles */
+@import './components/Layout/Layout.css';
+@import './components/Layout/Sidebar.css';
+@import './components/Layout/Topbar.css';
+@import './components/Dashboard/Dashboard.css';
+@import './components/Auth/Login.css';
+@import './components/Doctors/Doctors.css';
+@import './components/Common/Loading.css';
+@import './components/Common/Button.css';
+
+/* Global App Styles */
+.app-container {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+}
+
+/* Toastify Customization */
+.Toastify__toast {
+  font-family: 'Inter', sans-serif !important;
+  border-radius: var(--radius-md) !important;
+  font-size: 0.875rem !important;
+}
+
+.Toastify__toast--success {
+  background-color: var(--success-500) !important;
+}
+
+.Toastify__toast--error {
+  background-color: var(--danger-500) !important;
+}
+
+.Toastify__toast--info {
+  background-color: var(--info-500) !important;
+}
+
+.Toastify__toast--warning {
+  background-color: var(--warning-500) !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 0.75rem;
+  }
+  
+  .page-content {
+    padding: 1rem 0.5rem;
+  }
+}
