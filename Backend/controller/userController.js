@@ -326,15 +326,15 @@ export const devBootstrap = catchAsyncErrors(async (req, res, next) => {
   }
 
   // create admin
-  const admin = await ensureUser({ firstName: 'Dev', lastName: 'Admin', email: 'dev.admin@example.com', phone: '0000000000', password: 'password123', gender: 'Other', aadhar: '0000', dob: new Date(1990,0,1), role: 'Admin' });
+  const admin = await ensureUser({ firstName: 'Dev', lastName: 'Admin', email: 'dev.admin@example.com', phone: '0000000000', password: 'password123', gender: 'Other', aadhar: '123456789000', dob: new Date(1990, 0, 1), role: 'Admin' });
   created.admins.push(admin._id);
 
   // create doctor
-  const doctor = await ensureUser({ firstName: 'Jane', lastName: 'Doe', email: 'dr.jane@example.com', phone: '1111111111', password: 'password123', gender: 'Female', aadhar: '1111', dob: new Date(1985,5,5), role: 'Doctor', doctrDptmnt: 'Cardiology' });
+  const doctor = await ensureUser({ firstName: 'Jane', lastName: 'Doe', email: 'dr.jane@example.com', phone: '1111111111', password: 'password123', gender: 'Female', aadhar: '123456789001', dob: new Date(1985, 5, 5), role: 'Doctor', doctrDptmnt: 'Cardiology' });
   created.doctors.push(doctor._id);
 
   // create patient
-  const patient = await ensureUser({ firstName: 'John', lastName: 'Patient', email: 'john.patient@example.com', phone: '2222222222', password: 'password123', gender: 'Male', aadhar: '2222', dob: new Date(1995,3,3), role: 'Patient' });
+  const patient = await ensureUser({ firstName: 'John', lastName: 'Patient', email: 'john.patient@example.com', phone: '2222222222', password: 'password123', gender: 'Male', aadhar: '123456789002', dob: new Date(1995, 3, 3), role: 'Patient' });
   created.patients.push(patient._id);
 
   // create an appointment linking them

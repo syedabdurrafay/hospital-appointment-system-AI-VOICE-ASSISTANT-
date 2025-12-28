@@ -1,10 +1,10 @@
 import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../../context/AppContext';
-import { 
-  HiCalendar, 
-  HiUserGroup, 
-  HiChatAlt, 
-  HiArrowUp, 
+import {
+  HiCalendar,
+  HiUserGroup,
+  HiChatAlt,
+  HiArrowUp,
   HiArrowDown,
   HiClock,
   HiCheckCircle,
@@ -12,47 +12,7 @@ import {
 } from 'react-icons/hi';
 import './Dashboard.css';
 
-// Temporary API service - replace with your actual API calls
-const appointmentService = {
-  getAll: async () => {
-    try {
-      // Call backend appointment list endpoint and include credentials so cookies are sent
-      // Include credentials so cookies are sent via the Vite dev proxy.
-      // Also include Authorization header fallback if a token is stored in localStorage.
-      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) headers.Authorization = `Bearer ${token}`;
-
-      // Try proxied request first (dev). If it returns 401, retry directly against backend.
-      let response = await fetch('/api/appointment/getall', {
-        credentials: 'include',
-        headers
-      });
-
-      if (response.status === 401 && token) {
-        try {
-          console.warn('Proxy returned 401 — retrying direct backend request with Authorization header');
-          response = await fetch('http://localhost:5000/api/v1/appointment/getall', {
-            method: 'GET',
-            headers: { ...headers },
-          });
-        } catch (e) {
-          console.error('Direct backend retry failed', e);
-        }
-      }
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch appointments');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('API Error:', error);
-      // Return empty data structure to prevent crashes
-      return { appointments: [] };
-    }
-  }
-};
+import { appointmentService } from '../../services/api';
 
 const Dashboard = () => {
   const { language } = useContext(AppContext);
@@ -74,8 +34,9 @@ const Dashboard = () => {
         setLoading(true);
         // Fetch appointments using the API service
         const response = await appointmentService.getAll();
+        console.log(response);
         const appts = response.appointments || [];
-
+        console.log(appts)
         // compute stats
         const total = appts.length;
         const pending = appts.filter(a => ((a.status || '').toString().toLowerCase() === 'pending')).length;
@@ -93,15 +54,25 @@ const Dashboard = () => {
           const tx = new Date(x.createdAt || 0).getTime();
           const ty = new Date(y.createdAt || 0).getTime();
           return ty - tx;
-        }).slice(0, 5).map((a) => ({
-          id: a._id || a.id,
-          patientName: (a.patient?.firstName || '') + ' ' + (a.patient?.lastName || '') || a.patient?.name || 'Unknown',
-          doctorName: a.doctor?.firstName ? `Dr. ${a.doctor.firstName} ${a.doctor.lastName || ''}` : (a.doctor || a.doctorName || 'TBD'),
-          department: a.appointment?.department || a.department || '',
-          date: a.appointment?.date || a.appointment_date || a.date || '',
-          time: a.appointment?.time || a.appointment_time || a.time || '',
-          status: (a.status || '').toString().toLowerCase()
-        }));
+        }).slice(0, 5).map((a) => {
+          const getDoctorName = (doc) => {
+            if (!doc) return 'TBD';
+            if (typeof doc === 'string') return doc;
+            if (doc.firstName) return `Dr. ${doc.firstName} ${doc.lastName || ''}`;
+            if (doc.fullName) return doc.fullName;
+            return 'TBD';
+          };
+
+          return {
+            id: a._id || a.id,
+            patientName: (a.patient?.firstName || '') + ' ' + (a.patient?.lastName || '') || a.patient?.name || 'Unknown',
+            doctorName: getDoctorName(a.doctor) || getDoctorName(a.doctorId) || a.doctorName || 'TBD',
+            department: a.appointment?.department || a.department || '',
+            date: a.appointment?.date || a.appointment_date || a.date || '',
+            time: a.appointment?.time || a.appointment_time || a.time || '',
+            status: (a.status || '').toString().toLowerCase()
+          };
+        });
 
         setStats({
           totalAppointments: total,
@@ -111,7 +82,7 @@ const Dashboard = () => {
           pendingAppointments: pending,
           completedAppointments: completed
         });
-        
+
         setRecentAppointments(recent);
       } catch (error) {
         console.error('Failed to load dashboard data:', error);
@@ -124,7 +95,7 @@ const Dashboard = () => {
           pendingAppointments: 5,
           completedAppointments: 19
         });
-        
+
         // Mock recent appointments for development
         setRecentAppointments([
           {
@@ -258,7 +229,7 @@ const Dashboard = () => {
   ];
 
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'confirmed':
       case 'accepted':
         return 'status-confirmed';
@@ -273,7 +244,7 @@ const Dashboard = () => {
   };
 
   const getStatusIcon = (status) => {
-    switch(status) {
+    switch (status) {
       case 'confirmed':
       case 'accepted':
         return <HiCheckCircle />;
@@ -288,7 +259,7 @@ const Dashboard = () => {
   };
 
   const getStatusText = (status) => {
-    switch(status) {
+    switch (status) {
       case 'confirmed':
       case 'accepted':
         return t.confirmed;
@@ -356,7 +327,7 @@ const Dashboard = () => {
               {t.viewAll}
             </button>
           </div>
-          
+
           <div className="table-responsive">
             {recentAppointments.length === 0 ? (
               <div className="no-data">

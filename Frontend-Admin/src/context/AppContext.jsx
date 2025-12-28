@@ -5,22 +5,23 @@ export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('isAuthenticated') === 'true';
+    const hasToken = localStorage.getItem('adminToken') || localStorage.getItem('token');
+    return localStorage.getItem('isAuthenticated') === 'true' && !!hasToken;
   });
-  
+
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  
+
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('theme') || 'light';
   });
-  
+
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('language') || 'en';
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 

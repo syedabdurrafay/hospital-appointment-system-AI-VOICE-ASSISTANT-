@@ -33,10 +33,12 @@ API.interceptors.request.use((config) => {
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Clear tokens and redirect to login
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Clear all auth data to prevent infinite loops
       localStorage.removeItem('adminToken');
       localStorage.removeItem('token');
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
