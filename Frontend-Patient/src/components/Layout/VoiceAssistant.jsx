@@ -1,14 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import './VoiceAssistant.css';
 
 const VoiceAssistant = () => {
+  const { user } = useAuth();
   const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [response, setResponse] = useState('');
   const [isVisible, setIsVisible] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const recognitionRef = useRef(null);
+  const synthRef = useRef(null);
 
   useEffect(() => {
+    // Initialize Speech Recognition
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
@@ -29,24 +37,35 @@ const VoiceAssistant = () => {
       recognitionRef.current.onerror = (event) => {
         console.error('Speech recognition error', event.error);
         setIsListening(false);
+        if (event.error === 'no-speech') {
+          speak("I didn't hear anything. Please try again.");
+        }
       };
     } else {
       console.warn('Speech recognition not supported');
+      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+    }
+
+    // Initialize Speech Synthesis
+    if ('speechSynthesis' in window) {
+      synthRef.current = window.speechSynthesis;
     }
 
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
+      if (synthRef.current) {
+        synthRef.current.cancel();
+      }
     };
   }, []);
 
   const startListening = () => {
-    if (recognitionRef.current && !isListening) {
+    if (recognitionRef.current && !isListening && !isSpeaking) {
       recognitionRef.current.start();
       setIsListening(true);
       setTranscript('');
-      setResponse('');
     }
   };
 
@@ -57,110 +76,211 @@ const VoiceAssistant = () => {
     }
   };
 
-  const processVoiceCommand = (command) => {
-    const lowerCommand = command.toLowerCase();
-    let responseText = '';
+  const processVoiceCommand = async (command) => {
+    setIsProcessing(true);
 
-    if (lowerCommand.includes('book appointment') || lowerCommand.includes('appointment')) {
-      responseText = "I'll help you book an appointment. Please visit the appointments page to schedule.";
-      window.location.href = '/appointment';
-    } else if (lowerCommand.includes('login') || lowerCommand.includes('sign in')) {
-      responseText = "Taking you to the login page. Please sign in to access your account.";
-      window.location.href = '/login';
-    } else if (lowerCommand.includes('register') || lowerCommand.includes('sign up')) {
-      responseText = "Let's create your account. Taking you to the registration page.";
-      window.location.href = '/register';
-    } else if (lowerCommand.includes('contact') || lowerCommand.includes('call')) {
-      responseText = "You can contact us at 1-800-MEDICAL or email support@healthcare.com";
-      // Simulate call initiation
-      simulateCall();
-    } else if (lowerCommand.includes('departments')) {
-      responseText = "We have Cardiology, Orthopedics, Neurology, Pediatrics, and more. Check our departments section.";
-      document.getElementById('departments')?.scrollIntoView({ behavior: 'smooth' });
-    } else if (lowerCommand.includes('emergency')) {
-      responseText = "For emergencies, please dial 911 immediately or visit our emergency department.";
-    } else if (lowerCommand.includes('hours') || lowerCommand.includes('open')) {
-      responseText = "We're open 24/7 for emergencies. Regular hours are 8 AM to 8 PM, Monday to Saturday.";
-    } else {
-      responseText = "I heard: " + command + ". How can I assist you further?";
+    console.log('🎤 Processing voice command:', command);
+
+    try {
+      // Call backend AI endpoint
+      const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      console.log('📡 Calling API:', `${apiUrl}/api/v1/ai/chat`);
+
+      const response = await axios.post(`${apiUrl}/api/v1/ai/chat`, {
+        message: command,
+        history: conversationHistory,
+        context: {
+          user: user || null
+        }
+      });
+
+      console.log('✅ API Response:', response.data);
+
+      if (response.data.success) {
+        const aiResponse = response.data.response;
+        setResponse(aiResponse);
+
+        // Update conversation history
+        setConversationHistory(response.data.conversationHistory || [
+          ...conversationHistory,
+          { role: 'user', content: command },
+          { role: 'assistant', content: aiResponse }
+        ]);
+
+        // Speak the response
+        speak(aiResponse);
+      } else {
+        const errorMsg = response.data.message || "I'm sorry, I couldn't process that. Please try again.";
+        console.error('❌ API returned error:', errorMsg);
+        setResponse(errorMsg);
+        speak(errorMsg);
+      }
+    } catch (error) {
+      console.error('❌ Error processing voice command:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
+      let errorMsg = "I'm having trouble connecting. ";
+
+      if (error.response?.status === 500) {
+        errorMsg += "The AI service might not be configured properly. Please check if the API key is set.";
+      } else if (error.response?.data?.message) {
+        errorMsg += error.response.data.message;
+      } else if (error.message.includes('Network Error')) {
+        errorMsg += "Please check if the backend server is running.";
+      } else {
+        errorMsg += "Please try again.";
+      }
+
+      setResponse(errorMsg);
+      speak(errorMsg);
+    } finally {
+      setIsProcessing(false);
     }
-
-    setResponse(responseText);
-    speak(responseText);
   };
 
   const speak = (text) => {
-    if ('speechSynthesis' in window) {
+    if (synthRef.current) {
+      // Cancel any ongoing speech
+      synthRef.current.cancel();
+
+      setIsSpeaking(true);
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.0;
+      utterance.rate = 0.9;
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
-      speechSynthesis.speak(utterance);
+
+      // Select a pleasant voice if available
+      const voices = synthRef.current.getVoices();
+      const preferredVoice = voices.find(voice =>
+        voice.name.includes('Female') || voice.name.includes('Samantha') || voice.name.includes('Google')
+      );
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        // Auto-restart listening after AI finishes speaking
+        if (isVisible) {
+          setTimeout(() => {
+            startListening();
+          }, 500);
+        }
+      };
+
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+      };
+
+      synthRef.current.speak(utterance);
     }
   };
 
-  const simulateCall = () => {
-    // In a real application, this would initiate a phone call or VoIP
-    console.log('Initiating call to hospital...');
-    // For demo purposes, we'll just show an alert
-    alert('Initiating call to hospital reception... Please allow microphone access.');
+  const toggleAssistant = () => {
+    if (!isVisible) {
+      setIsVisible(true);
+      // Greet the user when opening
+      setTimeout(() => {
+        const greeting = user ? `Hello ${user.firstName}! I'm your AI hospital assistant. How can I help you today?` : "Hello! I'm your AI hospital assistant. How can I help you today?";
+        setResponse(greeting);
+        speak(greeting);
+      }, 300);
+    } else {
+      setIsVisible(false);
+      stopListening();
+      if (synthRef.current) {
+        synthRef.current.cancel();
+      }
+      setIsSpeaking(false);
+    }
   };
 
-  const toggleAssistant = () => {
-    setIsVisible(!isVisible);
+  const resetConversation = () => {
+    setConversationHistory([]);
+    setTranscript('');
+    setResponse('');
+    const msg = "Conversation reset. How can I help you?";
+    setResponse(msg);
+    speak(msg);
   };
 
   return (
     <>
-      <button className="voice-assistant-toggle" onClick={toggleAssistant}>
+      <button className="voice-assistant-toggle" onClick={toggleAssistant} title="AI Voice Assistant">
         <span className="assistant-icon">🎙️</span>
+        {isListening && <span className="pulse-ring"></span>}
       </button>
 
       {isVisible && (
         <div className="voice-assistant-container">
           <div className="assistant-header">
-            <h3>AI Voice Assistant</h3>
-            <button className="close-btn" onClick={toggleAssistant}>×</button>
+            <h3>🏥 AI Hospital Assistant</h3>
+            <div className="header-actions">
+              <button className="reset-btn" onClick={resetConversation} title="Reset conversation">
+                🔄
+              </button>
+              <button className="close-btn" onClick={toggleAssistant}>×</button>
+            </div>
           </div>
-          
+
           <div className="assistant-body">
             <div className="status-indicator">
-              <div className={`pulse ${isListening ? 'listening' : ''}`}></div>
-              <span>{isListening ? 'Listening...' : 'Ready'}</span>
+              <div className={`pulse ${isListening ? 'listening' : isSpeaking ? 'speaking' : ''}`}>
+                {isListening ? '🎤' : isSpeaking ? '🔊' : '💬'}
+              </div>
+              <span>
+                {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : isProcessing ? 'Thinking...' : 'Ready'}
+              </span>
             </div>
 
-            <div className="transcript-box">
-              <h4>You said:</h4>
-              <p className="transcript">{transcript || 'Speak to get started...'}</p>
-            </div>
+            <div className="conversation-display">
+              <div className="transcript-box">
+                <h4>You said:</h4>
+                <p className="transcript">{transcript || 'Click "Start Listening" to speak...'}</p>
+              </div>
 
-            <div className="response-box">
-              <h4>Response:</h4>
-              <p className="response">{response || 'Waiting for your command...'}</p>
+              <div className="response-box">
+                <h4>Assistant:</h4>
+                <p className="response">{response || 'Waiting for your message...'}</p>
+              </div>
             </div>
 
             <div className="controls">
               <button
                 className={`listen-btn ${isListening ? 'active' : ''}`}
                 onClick={isListening ? stopListening : startListening}
+                disabled={isSpeaking || isProcessing}
               >
                 {isListening ? '⏹️ Stop Listening' : '🎤 Start Listening'}
-              </button>
-              
-              <button className="speak-btn" onClick={() => speak('How can I help you today?')}>
-                🔊 Speak
               </button>
             </div>
 
             <div className="quick-commands">
               <h4>Try saying:</h4>
               <div className="commands-list">
-                <span>"Book an appointment"</span>
-                <span>"Contact hospital"</span>
-                <span>"Show departments"</span>
-                <span>"Emergency help"</span>
+                <span>"I need to book an appointment"</span>
+                <span>"Check available slots"</span>
+                <span>"Book for tomorrow"</span>
               </div>
             </div>
+
+            {conversationHistory.length > 0 && (
+              <div className="conversation-history">
+                <h4>Conversation History:</h4>
+                <div className="history-items">
+                  {conversationHistory.slice(-6).map((msg, idx) => (
+                    <div key={idx} className={`history-item ${msg.role}`}>
+                      <strong>{msg.role === 'user' ? 'You' : 'Assistant'}:</strong>
+                      <span>{msg.content}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

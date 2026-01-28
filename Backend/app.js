@@ -10,76 +10,72 @@ import messageRouter from "./router/messageRouter.js"
 import appointmentRouter from "./router/appointmentRouter.js"
 import notificationRouter from "./router/notificationRouter.js"
 import auditRouter from './router/auditRouter.js'
+import aiRouter from './router/aiRouter.js'
 
 const app = express();
 
 // Load .env (fallback to default .env in project root)
 config();
 
-// Enhanced CORS configuration
+// Enhanced CORS configuration with better debugging
 const allowedOrigins = [
     process.env.FRONTEND_PATIENT,
     process.env.FRONTEND_ADMIN,
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5174',
-    'http://localhost:8080'
-].filter(Boolean); // Remove undefined values
+    'http://localhost:8080',
+    'http://localhost:5000' // Add backend itself
+].filter(Boolean);
 
 console.log('Allowed CORS origins:', allowedOrigins);
 
-app.use(
-    cors({
-        origin: function (origin, callback) {
-            // Allow requests with no origin (like mobile apps or curl requests)
-            if (!origin && process.env.NODE_ENV === 'development') {
-                return callback(null, true);
-            }
-            
-            // Check if origin is in allowed list
-            if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-                callback(null, true);
-            } else {
-                console.log('CORS blocked origin:', origin);
-                callback(new Error('Not allowed by CORS'));
-            }
-        },
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-        credentials: true,
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-    })
-);
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
 
-// Handle pre-flight requests
+        // Check if origin is in allowed list
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.log('CORS blocked origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cookie']
+}));
+
+// Handle pre-flight requests explicitly
 app.options('*', cors());
 
-app.use(cookieParser())
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-
+// Middleware setup
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(cookieParser());
 app.use(fileUpload({
     useTempFiles: true,
-    tempFileDir: '/tmp/'
-}))
+    tempFileDir: '/tmp/',
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+}));
 
 // Debug middleware for all requests
 if (process.env.DEBUG_API === 'true') {
     app.use((req, res, next) => {
         console.log(`\n=== [${new Date().toISOString()}] ${req.method} ${req.originalUrl} ===`);
-        console.log('Headers:', JSON.stringify(req.headers, null, 2));
         console.log('Cookies:', req.cookies || {});
         console.log('Body:', req.body ? JSON.stringify(req.body).substring(0, 500) : 'Empty');
-        console.log('Query:', req.query);
-        console.log('Params:', req.params);
         next();
     });
 }
 
 // Health check endpoint (no auth required)
 app.get('/health', (req, res) => {
-    res.status(200).json({ 
-        success: true, 
-        status: 'ok', 
+    res.status(200).json({
+        success: true,
+        status: 'ok',
         timestamp: new Date().toISOString(),
         service: 'Hospital Management API',
         version: '1.0.0'
@@ -102,51 +98,58 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-// Register routers with debug logging
-console.log('Registering routers...');
+// Test endpoint
+app.get('/api/test', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'API is working',
+        timestamp: new Date().toISOString(),
+        env: process.env.NODE_ENV || 'development'
+    });
+});
 
-try {
-    app.use('/api/v1/message', messageRouter);
-    console.log('✓ Message router mounted at /api/v1/message');
-} catch (e) {
-    console.error('✗ Failed to mount messageRouter:', e.message);
-}
+// Register routers with proper error handling
+console.log('\n=== Registering Routers ===');
 
-try {
-    app.use('/api/v1/user', userRouter);
-    console.log('✓ User router mounted at /api/v1/user');
-} catch (e) {
-    console.error('✗ Failed to mount userRouter:', e.message);
-}
+// Define routers with proper error handling
+const routers = [
+    { path: '/api/v1/message', router: messageRouter, name: 'messageRouter' },
+    { path: '/api/v1/user', router: userRouter, name: 'userRouter' },
+    { path: '/api/v1/appointment', router: appointmentRouter, name: 'appointmentRouter' },
+    { path: '/api/v1/notification', router: notificationRouter, name: 'notificationRouter' },
+    { path: '/api/v1/audit', router: auditRouter, name: 'auditRouter' },
+    { path: '/api/v1/ai', router: aiRouter, name: 'aiRouter' },
+    // Compatibility route for admin frontend
+    { path: '/api/appointments', router: appointmentRouter, name: 'compatibilityAppointmentRouter' }
+];
 
-try {
-    app.use('/api/v1/appointment', appointmentRouter);
-    console.log('✓ Appointment router mounted at /api/v1/appointment');
-} catch (e) {
-    console.error('✗ Failed to mount appointmentRouter:', e.message);
-}
+routers.forEach(({ path, router, name }) => {
+    try {
+        app.use(path, router);
+        console.log(`✓ ${name} mounted at ${path}`);
+    } catch (error) {
+        console.error(`✗ Failed to mount ${name}:`, error.message);
+    }
+});
 
-try {
-    app.use('/api/v1/notification', notificationRouter);
-    console.log('✓ Notification router mounted at /api/v1/notification');
-} catch (e) {
-    console.error('✗ Failed to mount notificationRouter:', e.message);
-}
+// Special routes for checking endpoints
+app.get('/api/v1/user/admin/check', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'Admin check endpoint is accessible',
+        timestamp: new Date().toISOString()
+    });
+});
 
-try {
-    app.use('/api/v1/audit', auditRouter);
-    console.log('✓ Audit router mounted at /api/v1/audit');
-} catch (e) {
-    console.error('✗ Failed to mount auditRouter:', e.message);
-}
-
-// Compatibility route for admin frontend (using /api/appointments)
-try {
-    app.use('/api/appointments', appointmentRouter);
-    console.log('✓ Compatibility appointment router mounted at /api/appointments');
-} catch (e) {
-    console.error('✗ Failed to mount compatibility appointmentRouter:', e.message);
-}
+// Test login endpoint
+app.post('/api/v1/user/login/test', (req, res) => {
+    console.log('Login test endpoint called');
+    res.status(200).json({
+        success: true,
+        message: 'Login endpoint is accessible',
+        receivedData: req.body
+    });
+});
 
 // Start reminder scheduler (optional)
 (async () => {
@@ -167,9 +170,9 @@ dbConnection();
 // 404 handler for unmatched routes
 app.all('*', (req, res) => {
     console.log(`404 - Route not found: ${req.method} ${req.originalUrl}`);
-    res.status(404).json({ 
-        success: false, 
-        message: 'Route not found', 
+    res.status(404).json({
+        success: false,
+        message: 'Route not found',
         path: req.originalUrl,
         method: req.method,
         timestamp: new Date().toISOString()
@@ -179,48 +182,17 @@ app.all('*', (req, res) => {
 // Global error handler
 app.use(errorMiddleware);
 
-// Log uncaught exceptions
+// Error logging
 process.on('uncaughtException', (err) => {
     console.error('\n🚨 UNCAUGHT EXCEPTION 🚨');
-    console.error('Name:', err.name);
-    console.error('Message:', err.message);
+    console.error('Error:', err.message);
     console.error('Stack:', err.stack);
-    console.error('Timestamp:', new Date().toISOString());
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('\n🚨 UNHANDLED REJECTION 🚨');
     console.error('Promise:', promise);
     console.error('Reason:', reason);
-    console.error('Timestamp:', new Date().toISOString());
 });
-
-// Server startup logging
-const startServer = () => {
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-        console.log('\n' + '='.repeat(50));
-        console.log('🚀 Hospital Management System Backend');
-        console.log('='.repeat(50));
-        console.log(`✅ Server running on port: ${PORT}`);
-        console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
-        console.log(`✅ Database: ${process.env.MONGO_URI ? 'Connected' : 'Not configured'}`);
-        console.log(`✅ CORS Origins: ${allowedOrigins.join(', ') || 'All origins (development)'}`);
-        console.log(`✅ Debug Mode: ${process.env.DEBUG_API === 'true' ? 'Enabled' : 'Disabled'}`);
-        console.log('='.repeat(50));
-        console.log('\nAvailable Routes:');
-        console.log('- GET  /health                    Health check');
-        console.log('- GET  /api/status               API status');
-        console.log('- POST /api/v1/appointment/post  Create appointment');
-        console.log('- GET  /api/v1/appointment/getall Get all appointments (Admin)');
-        console.log('- GET  /api/appointments/getall   Compatibility route');
-        console.log('- PUT  /api/v1/appointment/update/:id Update appointment');
-        console.log('- DELETE /api/v1/appointment/delete/:id Delete appointment');
-        console.log('='.repeat(50) + '\n');
-    });
-};
-
-// Start the server
-startServer();
 
 export default app;

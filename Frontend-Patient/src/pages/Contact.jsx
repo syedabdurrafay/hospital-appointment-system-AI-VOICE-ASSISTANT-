@@ -7,7 +7,8 @@ const Contact = () => {
     name: '',
     email: '',
     phone: '',
-    subject: '',
+    company: '',
+    practice_size: '',
     message: ''
   });
   const [loading, setLoading] = useState(false);
@@ -23,12 +24,13 @@ const Contact = () => {
 
     // Simulate API call
     setTimeout(() => {
-      toast.success('Message sent successfully! We\'ll contact you soon.');
+      toast.success('Message sent successfully! Our team will contact you within 24 hours.');
       setFormData({
         name: '',
         email: '',
         phone: '',
-        subject: '',
+        company: '',
+        practice_size: '',
         message: ''
       });
       setLoading(false);
@@ -37,45 +39,77 @@ const Contact = () => {
 
   const contactInfo = [
     {
-      icon: '📞',
-      title: 'Phone Number',
-      details: ['1-800-MEDICAL', '+1 (123) 456-7890'],
-      color: '#667eea'
+      icon: '🤖',
+      title: 'Sales & Demo',
+      details: ['demo@madicarepro.com', 'Schedule a personalized demo'],
+      color: 'var(--primary-500)'
     },
     {
-      icon: '✉️',
-      title: 'Email Address',
-      details: ['support@medicarepro.com', 'emergency@medicarepro.com'],
-      color: '#4ecdc4'
+      icon: '💼',
+      title: 'Enterprise Sales',
+      details: ['sales@madicarepro.com', 'Multi-practice solutions'],
+      color: 'var(--primary-600)'
+    },
+    {
+      icon: '🔧',
+      title: 'Technical Support',
+      details: ['support@madicarepro.com', '24/7 technical assistance'],
+      color: 'var(--primary-700)'
     },
     {
       icon: '📍',
-      title: 'Location',
-      details: ['123 Healthcare Street', 'Medical City, MC 12345', 'United States'],
-      color: '#ff6b6b'
-    },
-    {
-      icon: '⏰',
-      title: 'Working Hours',
-      details: ['24/7 Emergency Services', 'Mon-Fri: 8:00 AM - 8:00 PM', 'Sat: 9:00 AM - 6:00 PM'],
-      color: '#ffcc5c'
+      title: 'Our Location',
+      details: ['Berlin, Germany', 'EU Data Center Hosted'],
+      color: 'var(--primary-800)'
     }
   ];
 
-  const emergencyContacts = [
-    { label: 'Emergency Ambulance', number: '911', icon: '🚑' },
-    { label: 'Fire Department', number: '911', icon: '🚒' },
-    { label: 'Police Department', number: '911', icon: '🚔' },
-    { label: 'Poison Control', number: '1-800-222-1222', icon: '☠️' }
+  const technicalContacts = [
+    { 
+      label: 'API Documentation', 
+      link: '/api-docs',
+      icon: '📚',
+      description: 'Complete API reference'
+    },
+    { 
+      label: 'Integration Support', 
+      link: '/integration',
+      icon: '🔄',
+      description: 'System integration help'
+    },
+    { 
+      label: 'Security FAQ', 
+      link: '/security',
+      icon: '🔒',
+      description: 'Privacy & compliance'
+    },
+    { 
+      label: 'Developer Portal', 
+      link: '/developers',
+      icon: '👨‍💻',
+      description: 'Resources for developers'
+    }
   ];
 
-  const departmentsContact = [
-    { name: 'Emergency Department', number: 'Ext. 100', email: 'emergency@medicarepro.com' },
-    { name: 'Cardiology', number: 'Ext. 101', email: 'cardio@medicarepro.com' },
-    { name: 'Neurology', number: 'Ext. 102', email: 'neuro@medicarepro.com' },
-    { name: 'Pediatrics', number: 'Ext. 103', email: 'pediatrics@medicarepro.com' },
-    { name: 'Orthopedics', number: 'Ext. 104', email: 'ortho@medicarepro.com' },
-    { name: 'Administration', number: 'Ext. 105', email: 'admin@medicarepro.com' }
+  const demoOptions = [
+    { 
+      title: 'Basic Demo', 
+      duration: '30 min',
+      features: ['Voice assistant walkthrough', 'Basic features overview'],
+      icon: '🎬'
+    },
+    { 
+      title: 'Technical Demo', 
+      duration: '60 min',
+      features: ['API integration', 'Custom workflow setup'],
+      icon: '⚙️'
+    },
+    { 
+      title: 'Enterprise Demo', 
+      duration: '90 min',
+      features: ['Multi-practice setup', 'Custom AI training'],
+      icon: '🏢'
+    }
   ];
 
   return (
@@ -83,8 +117,8 @@ const Contact = () => {
       {/* Hero Section */}
       <section className="contact-hero">
         <div className="container">
-          <h1>Get in Touch With Us</h1>
-          <p>We're here to help. Contact us for appointments, inquiries, or emergency assistance.</p>
+          <h1>Contact MadiCare Pro</h1>
+          <p>Get in touch to learn how our AI voice assistant can transform your GP practice</p>
         </div>
       </section>
 
@@ -116,8 +150,8 @@ const Contact = () => {
           <div className="contact-grid">
             {/* Contact Form */}
             <div className="contact-form-section">
-              <h2 className="section-title">Send Us a Message</h2>
-              <p className="section-subtitle">Fill out the form below and we'll get back to you soon</p>
+              <h2 className="section-title">Request a Demo</h2>
+              <p className="section-subtitle">Fill out this form to schedule a personalized demo of our AI voice assistant</p>
               
               <form onSubmit={handleSubmit} className="contact-form">
                 <div className="form-grid">
@@ -129,19 +163,19 @@ const Contact = () => {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      placeholder="Enter your full name"
+                      placeholder="Your full name"
                       required
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="email">Email Address *</label>
+                    <label htmlFor="email">Work Email *</label>
                     <input
                       type="email"
                       id="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      placeholder="Enter your email"
+                      placeholder="your.name@practice.com"
                       required
                     />
                   </div>
@@ -153,95 +187,133 @@ const Contact = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      placeholder="Enter your phone number"
+                      placeholder="+49 123 456 7890"
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="subject">Subject *</label>
+                    <label htmlFor="company">Practice/Hospital Name *</label>
                     <input
                       type="text"
-                      id="subject"
-                      name="subject"
-                      value={formData.subject}
+                      id="company"
+                      name="company"
+                      value={formData.company}
                       onChange={handleChange}
-                      placeholder="What is this regarding?"
+                      placeholder="Your practice name"
                       required
                     />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="practice_size">Practice Size *</label>
+                    <select
+                      id="practice_size"
+                      name="practice_size"
+                      value={formData.practice_size}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Select size</option>
+                      <option value="1-2">1-2 Doctors (Small)</option>
+                      <option value="3-5">3-5 Doctors (Medium)</option>
+                      <option value="6-10">6-10 Doctors (Large)</option>
+                      <option value="10+">10+ Doctors (Enterprise)</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="demo_type">Demo Preference</label>
+                    <select
+                      id="demo_type"
+                      name="demo_type"
+                      value={formData.demo_type}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select demo type</option>
+                      <option value="basic">Basic Demo (30 min)</option>
+                      <option value="technical">Technical Demo (60 min)</option>
+                      <option value="enterprise">Enterprise Demo (90 min)</option>
+                    </select>
                   </div>
                 </div>
                 
                 <div className="form-group">
-                  <label htmlFor="message">Message *</label>
+                  <label htmlFor="message">What challenges are you facing? *</label>
                   <textarea
                     id="message"
                     name="message"
                     value={formData.message}
                     onChange={handleChange}
-                    placeholder="Type your message here..."
+                    placeholder="Tell us about your current appointment scheduling process, call volume, or specific needs..."
                     rows="6"
                     required
                   />
                 </div>
                 
-                <button 
-                  type="submit" 
-                  className="btn btn-primary btn-block"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <span className="spinner"></span>
-                      Sending Message...
-                    </>
-                  ) : (
-                    'Send Message'
-                  )}
-                </button>
+                <div className="form-footer">
+                  <div className="privacy-note">
+                    <span className="privacy-icon">🔒</span>
+                    <span>Your information is protected by GDPR. We'll never share your details.</span>
+                  </div>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary btn-block"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <span className="spinner"></span>
+                        Sending Request...
+                      </>
+                    ) : (
+                      'Request Demo Now'
+                    )}
+                  </button>
+                </div>
               </form>
             </div>
 
-            {/* Emergency & Departments Info */}
+            {/* Sidebar */}
             <div className="contact-sidebar">
-              {/* Emergency Contacts */}
-              <div className="emergency-contacts">
+              {/* Demo Options */}
+              <div className="demo-options">
                 <h3 className="sidebar-title">
-                  <span className="title-icon">🚨</span>
-                  Emergency Contacts
+                  <span className="title-icon">🎯</span>
+                  Demo Options
                 </h3>
-                <div className="emergency-list">
-                  {emergencyContacts.map((contact, index) => (
-                    <div key={index} className="emergency-item">
-                      <div className="emergency-icon">{contact.icon}</div>
-                      <div className="emergency-info">
-                        <h4>{contact.label}</h4>
-                        <p className="emergency-number">{contact.number}</p>
+                <div className="demo-options-list">
+                  {demoOptions.map((demo, index) => (
+                    <div key={index} className="demo-option">
+                      <div className="demo-icon">{demo.icon}</div>
+                      <div className="demo-content">
+                        <div className="demo-header">
+                          <h4>{demo.title}</h4>
+                          <span className="demo-duration">{demo.duration}</span>
+                        </div>
+                        <ul className="demo-features">
+                          {demo.features.map((feature, idx) => (
+                            <li key={idx}>{feature}</li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Departments Contact */}
-              <div className="departments-contact">
+              {/* Technical Contacts */}
+              <div className="technical-contacts">
                 <h3 className="sidebar-title">
-                  <span className="title-icon">🏥</span>
-                  Department Contacts
+                  <span className="title-icon">🔧</span>
+                  Technical Resources
                 </h3>
-                <div className="departments-list">
-                  {departmentsContact.map((dept, index) => (
-                    <div key={index} className="department-item">
-                      <h4>{dept.name}</h4>
-                      <div className="department-contacts">
-                        <p className="contact-number">
-                          <span className="contact-icon">📞</span>
-                          {dept.number}
-                        </p>
-                        <p className="contact-email">
-                          <span className="contact-icon">✉️</span>
-                          {dept.email}
-                        </p>
+                <div className="technical-list">
+                  {technicalContacts.map((contact, index) => (
+                    <a key={index} href={contact.link} className="technical-item">
+                      <div className="technical-icon">{contact.icon}</div>
+                      <div className="technical-info">
+                        <h4>{contact.label}</h4>
+                        <p className="technical-desc">{contact.description}</p>
                       </div>
-                    </div>
+                      <span className="arrow-icon">→</span>
+                    </a>
                   ))}
                 </div>
               </div>
@@ -250,23 +322,23 @@ const Contact = () => {
               <div className="quick-actions">
                 <h3 className="sidebar-title">
                   <span className="title-icon">⚡</span>
-                  Quick Actions
+                  Quick Access
                 </h3>
                 <div className="action-buttons">
-                  <button className="btn btn-primary btn-block">
-                    <span className="btn-icon">📅</span>
-                    Book Appointment
-                  </button>
-                  <button className="btn btn-outline btn-block">
-                    <span className="btn-icon">🗺️</span>
-                    Get Directions
-                  </button>
+                  <a href="/demo" className="btn btn-primary btn-block">
+                    <span className="btn-icon">🎮</span>
+                    Try Live Demo
+                  </a>
+                  <a href="/pricing" className="btn btn-outline btn-block">
+                    <span className="btn-icon">💰</span>
+                    View Pricing
+                  </a>
                   <a 
-                    href="tel:911" 
-                    className="btn btn-emergency btn-block"
+                    href="/docs" 
+                    className="btn btn-outline btn-block"
                   >
-                    <span className="btn-icon">🚨</span>
-                    Call 911 (Emergency)
+                    <span className="btn-icon">📚</span>
+                    Read Documentation
                   </a>
                 </div>
               </div>
@@ -275,21 +347,35 @@ const Contact = () => {
         </div>
       </section>
 
-      {/* Map Section */}
-      <section className="map-section">
+      {/* CTA Section */}
+      <section className="contact-cta">
         <div className="container">
-          <h2 className="section-title">Find Us Here</h2>
-          <div className="map-container">
-            {/* Placeholder for Google Map */}
-            <div className="map-placeholder">
-              <div className="map-overlay">
-                <h3>MediCare Pro Hospital</h3>
-                <p>123 Healthcare Street, Medical City</p>
-                <button className="btn btn-primary">
-                  <span className="btn-icon">🗺️</span>
-                  Open in Maps
-                </button>
+          <div className="cta-content">
+            <h2>Ready to Transform Your Practice?</h2>
+            <p>Join 500+ GP practices already saving hours each week with MadiCare Pro</p>
+            <div className="cta-stats">
+              <div className="stat">
+                <div className="stat-number">95%</div>
+                <div className="stat-label">Reduction in Missed Calls</div>
               </div>
+              <div className="stat">
+                <div className="stat-number">40%</div>
+                <div className="stat-label">Time Saved on Scheduling</div>
+              </div>
+              <div className="stat">
+                <div className="stat-number">100%</div>
+                <div className="stat-label">GDPR Compliant</div>
+              </div>
+            </div>
+            <div className="cta-actions">
+              <a href="/demo" className="btn btn-primary btn-lg">
+                <span className="btn-icon">🤖</span>
+                Start Free Trial
+              </a>
+              <a href="tel:+493012345678" className="btn btn-outline btn-lg">
+                <span className="btn-icon">📞</span>
+                Call Us: +49 30 123 4567
+              </a>
             </div>
           </div>
         </div>

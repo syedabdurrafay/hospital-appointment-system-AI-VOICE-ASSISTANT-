@@ -2,27 +2,27 @@ import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext';
 import { HiMail, HiLockClosed, HiOutlineLogin, HiUser, HiEye, HiEyeOff } from 'react-icons/hi';
+import { toast } from 'react-toastify';
 import './Login.css';
+import { userService } from '../../services/api';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // Fix: Extract language and other context values correctly
   const { setIsAuthenticated, setUser, language, setLanguage } = useContext(AppContext);
   const navigate = useNavigate();
 
   const translations = {
     en: {
-      title: 'HealthCare Pro',
+      title: 'Admin Portal',
       subtitle: 'Hospital Management System',
       email: 'Email Address',
       password: 'Password',
-      confirmPassword: 'Confirm Password',
       login: 'Sign In',
       adminOnly: 'Administrator Access Only',
       switchToGerman: 'Switch to German',
@@ -30,24 +30,19 @@ const Login = () => {
       emailRequired: 'Email is required',
       emailInvalid: 'Please enter a valid email',
       passwordRequired: 'Password is required',
-      passwordMismatch: 'Passwords do not match',
-      demoCredentials: 'Demo: admin@healthcare.com / password123'
     },
     de: {
-      title: 'HealthCare Pro',
+      title: 'Admin-Portal',
       subtitle: 'Krankenhausverwaltungssystem',
       email: 'E-Mail-Adresse',
       password: 'Passwort',
-      confirmPassword: 'Passwort bestätigen',
       login: 'Anmelden',
-      adminOnly: 'Nur Administratorzugriff',
+      adminOnly: 'Nur für Administratoren',
       switchToGerman: 'Auf Deutsch wechseln',
       switchToEnglish: 'Auf Englisch wechseln',
       emailRequired: 'E-Mail ist erforderlich',
       emailInvalid: 'Bitte geben Sie eine gültige E-Mail-Adresse ein',
       passwordRequired: 'Passwort ist erforderlich',
-      passwordMismatch: 'Passwörter stimmen nicht überein',
-      demoCredentials: 'Demo: admin@healthcare.com / password123'
     }
   };
 
@@ -66,64 +61,50 @@ const Login = () => {
       newErrors.password = t.passwordRequired;
     }
 
-    if (!confirmPassword) {
-      newErrors.confirmPassword = t.passwordRequired;
-    } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = t.passwordMismatch;
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setLoading(true);
     try {
-      const resp = await fetch('/api/user/login', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-      // backend sets adminToken cookie; store user in context
-      setIsAuthenticated(true);
-      setUser(data.user || data.user);
-      // Persist token locally as fallback for Authorization header
-      if (data.token) {
-        try {
-          localStorage.setItem('adminToken', data.token);
-          localStorage.setItem('token', data.token);
-        } catch (e) {
-          console.warn('Failed to persist token to localStorage', e);
+      console.log('Attempting login as Admin...');
+
+      const response = await userService.login(email, password);
+      console.log('Login response:', response);
+
+      if (response.success && response.user.role === 'Admin') {
+        setUser(response.user);
+        setIsAuthenticated(true);
+
+        if (response.token) {
+          localStorage.setItem('adminToken', response.token);
+          localStorage.setItem('token', response.token);
         }
+
+        toast.success('Login successful!');
+        navigate('/dashboard');
+      } else {
+        throw new Error('Invalid admin credentials');
       }
-      navigate('/dashboard');
     } catch (err) {
-      console.error('Login error', err);
-      setErrors(prev => ({ ...prev, form: err.message || 'Login failed' }));
+      console.error('Login error details:', err);
+      const message = err.response?.data?.message || err.message || 'Login failed';
+      setErrors(prev => ({ ...prev, form: message }));
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemoLogin = () => {
-    setEmail('admin@healthcare.com');
-    setPassword('password123');
-    setConfirmPassword('password123');
-  };
-
   return (
     <div className="login-page">
       <div className="language-toggle">
-        <button 
+        <button
           onClick={() => setLanguage(language === 'en' ? 'de' : 'en')}
           className="lang-btn"
         >
@@ -192,34 +173,14 @@ const Login = () => {
               {errors.password && <span className="error-message">{errors.password}</span>}
             </div>
 
-            <div className="form-group">
-              <label className="form-label">{t.confirmPassword}</label>
-              <div className="input-group">
-                <HiLockClosed className="input-icon" />
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    if (errors.confirmPassword) setErrors(prev => ({ ...prev, confirmPassword: '' }));
-                  }}
-                  placeholder="••••••••"
-                  className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
-                  autoComplete="new-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="password-toggle"
-                >
-                  {showConfirmPassword ? <HiEyeOff /> : <HiEye />}
-                </button>
+            {errors.form && (
+              <div className="form-error">
+                <span className="error-message">{errors.form}</span>
               </div>
-              {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
-            </div>
+            )}
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="login-btn"
               disabled={loading}
             >
@@ -232,16 +193,6 @@ const Login = () => {
                 </>
               )}
             </button>
-
-            <div className="demo-section">
-              <button 
-                type="button"
-                onClick={handleDemoLogin}
-                className="demo-btn"
-              >
-                {t.demoCredentials}
-              </button>
-            </div>
           </form>
         </div>
       </div>

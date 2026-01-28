@@ -1,23 +1,24 @@
 import { useContext } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext';
-import { 
-  HiHome, 
-  HiUserGroup, 
-  HiUserAdd, 
-  HiUserCircle, 
-  HiChatAlt2, 
-  HiCalendar, 
-  HiCog, 
+import {
+  HiHome,
+  HiUserGroup,
+  HiUserAdd,
+  HiUserCircle,
+  HiChatAlt2,
+  HiCalendar,
+  HiCog,
   HiLogout,
   HiSun,
   HiMoon,
-  HiGlobe
+  HiGlobe,
+  HiUpload
 } from 'react-icons/hi';
 import './Sidebar.css';
 
 const Sidebar = () => {
-  const { theme, setTheme, language, setLanguage, logout, sidebarOpen, setSidebarOpen } = useContext(AppContext);
+  const { theme, setTheme, language, setLanguage, logout, sidebarOpen, setSidebarOpen, user } = useContext(AppContext);
   const navigate = useNavigate();
 
   const navItems = [
@@ -26,6 +27,7 @@ const Sidebar = () => {
     { path: '/doctors/add', icon: <HiUserAdd />, label: { en: 'Add Doctor', de: 'Arzt hinzufügen' } },
     { path: '/admins/add', icon: <HiUserCircle />, label: { en: 'Add Admin', de: 'Admin hinzufügen' } },
     { path: '/appointments', icon: <HiCalendar />, label: { en: 'Appointments', de: 'Termine' } },
+    { path: '/patients/import', icon: <HiUpload />, label: { en: 'Import Patients', de: 'Patienten importieren' } },
     { path: '/messages', icon: <HiChatAlt2 />, label: { en: 'Messages', de: 'Nachrichten' } },
     { path: '/settings', icon: <HiCog />, label: { en: 'Settings', de: 'Einstellungen' } },
   ];
@@ -44,7 +46,7 @@ const Sidebar = () => {
           <NavLink
             key={item.path}
             to={item.path}
-            className={({ isActive }) => 
+            className={({ isActive }) =>
               `nav-item ${isActive ? 'active' : ''}`
             }
             onClick={() => setSidebarOpen(false)}
@@ -56,7 +58,7 @@ const Sidebar = () => {
       </nav>
 
       <div className="sidebar-footer">
-        <button 
+        <button
           className="footer-btn"
           onClick={setTheme}
           title={language === 'en' ? 'Toggle theme' : 'Thema wechseln'}
@@ -65,7 +67,7 @@ const Sidebar = () => {
           <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
         </button>
 
-        <button 
+        <button
           className="footer-btn"
           onClick={setLanguage}
           title={language === 'en' ? 'Switch language' : 'Sprache wechseln'}
@@ -74,7 +76,7 @@ const Sidebar = () => {
           <span>{language === 'en' ? 'DE' : 'EN'}</span>
         </button>
 
-        <button 
+        <button
           className="footer-btn logout-btn"
           onClick={() => {
             logout();

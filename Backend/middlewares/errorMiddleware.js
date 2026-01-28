@@ -6,6 +6,14 @@ class ErrorHandler extends Error {
 }
 
 export const errorMiddleware = (err, req, res, next) => {
+    console.debug('ERROR MIDDLEWARE CAUGHT:', {
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+        code: err.code,
+        path: err.path,
+        value: err.value
+    });
 
     err.message = err.message || 'Internal Server Error';
     err.statusCode = err.statusCode || 500;
@@ -16,14 +24,18 @@ export const errorMiddleware = (err, req, res, next) => {
     }
     if (err.name === "JsonWebTokenError") {
         const message = "Json Web Token is invalid, Try Again!";
-        err = new ErrorHandler(message, 400)
+        console.error('JWT Error:', err);
+        err = new ErrorHandler(message, 401)
     }
     if (err.name === "TokenExpiredError") {
         const message = "Json Web Token is Expired, Try Again!";
-        err = new ErrorHandler(message, 400)
+        console.error('JWT Expired:', err);
+        err = new ErrorHandler(message, 401)
     }
     if (err.name === "CastError") {
-        const message = `Invalid ${err.path}`;
+        // Handle MongoDB CastErrors (e.g. invalid ObjectId)
+        const message = `Invalid resource found: ${err.path}. Value: ${err.value}`;
+        console.error('Cast Error Details:', err);
         err = new ErrorHandler(message, 400)
     }
 

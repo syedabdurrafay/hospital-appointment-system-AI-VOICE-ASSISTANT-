@@ -32,7 +32,16 @@ const appointmentSchema = new mongoose.Schema({
     status: { type: String, enum: ["Pending", "Accepted", "Rejected", "Cancelled", "Completed"], default: "Pending" },
     createdAt: { type: Date, default: Date.now },
     confirmedAt: { type: Date },
-    cancelledAt: { type: Date }
+    cancelledAt: { type: Date },
+    // Add slot duration for better management
+    duration: { type: Number, default: 30 }, // in minutes
+    // Add appointment type for future extensions
+    appointmentType: { type: String, default: 'Regular' }
 });
+
+// Add indexes for faster queries
+appointmentSchema.index({ doctorId: 1, 'appointment.date': 1, 'appointment.time': 1 });
+appointmentSchema.index({ patientId: 1, createdAt: -1 });
+appointmentSchema.index({ status: 1 });
 
 export const Appointment = mongoose.model("Appointment", appointmentSchema);

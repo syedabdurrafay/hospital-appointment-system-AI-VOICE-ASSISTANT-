@@ -1,6 +1,8 @@
 export const generateToken = (user, message, statusCode, res) => {
     const token = user.generateJsonWebToken();
-    const cookieName = user.role === 'Admin' ? 'adminToken' : 'patientToken';
+    let cookieName = 'patientToken';
+    if (user.role === 'Admin') cookieName = 'adminToken';
+    else if (user.role === 'Doctor') cookieName = 'doctorToken';
     const cookieExpireDays = parseInt(process.env.COOKIE_EXPIRE || '7', 10);
     // Ensure cookie is set for root path so it will be sent on other API endpoints
     const cookieOptions = {
@@ -14,6 +16,7 @@ export const generateToken = (user, message, statusCode, res) => {
     res
         .status(statusCode)
         .cookie(cookieName, token, cookieOptions)
+        .cookie('token', token, cookieOptions) // Also set a generic token cookie
         .json({
             success: true,
             message,

@@ -10,6 +10,8 @@ const AppointmentForm = () => {
   const [doctors, setDoctors] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [currentStep, setCurrentStep] = useState(1);
+  const [fetchingDoctors, setFetchingDoctors] = useState(true);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -18,46 +20,46 @@ const AppointmentForm = () => {
     phone: '',
     dob: '',
     gender: '',
-    department: '',
     doctorId: '',
     appointmentDate: '',
     appointmentTime: '',
     symptoms: '',
     previousHistory: false,
-    insurance: '',
     emergencyContact: '',
   });
 
-  const departments = [
-    'Cardiology',
-    'Neurology',
-    'Orthopedics',
-    'Pediatrics',
-    'Dermatology',
-    'Oncology',
-    'Gynecology',
-    'ENT',
-    'General Medicine',
-    'Emergency'
-  ];
-
-  // Mock doctors data as fallback
+  // Default mock doctors as fallback
   const mockDoctors = [
-    { _id: '1', firstName: 'John', lastName: 'Smith', doctDptmnt: 'Cardiology', specialization: 'Cardiologist', experience: '15' },
-    { _id: '2', firstName: 'Sarah', lastName: 'Johnson', doctDptmnt: 'Neurology', specialization: 'Neurologist', experience: '12' },
-    { _id: '3', firstName: 'Michael', lastName: 'Brown', doctDptmnt: 'Orthopedics', specialization: 'Orthopedic Surgeon', experience: '20' },
-    { _id: '4', firstName: 'Emily', lastName: 'Davis', doctDptmnt: 'Pediatrics', specialization: 'Pediatrician', experience: '8' },
-    { _id: '5', firstName: 'Robert', lastName: 'Wilson', doctDptmnt: 'Dermatology', specialization: 'Dermatologist', experience: '10' },
-    { _id: '6', firstName: 'Lisa', lastName: 'Miller', doctDptmnt: 'Gynecology', specialization: 'Gynecologist', experience: '14' },
-    { _id: '7', firstName: 'David', lastName: 'Taylor', doctDptmnt: 'ENT', specialization: 'ENT Specialist', experience: '18' },
-    { _id: '8', firstName: 'Jennifer', lastName: 'Anderson', doctDptmnt: 'General Medicine', specialization: 'General Physician', experience: '9' },
-  ];
-
-  const timeSlots = [
-    '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM',
-    '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
-    '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM',
-    '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM'
+    { 
+      _id: '1', 
+      id: '1',
+      firstName: 'John', 
+      lastName: 'Smith', 
+      specialization: 'General Physician', 
+      experience: '15',
+      workingHours: { start: '09:00', end: '17:00' },
+      consultationDuration: 30
+    },
+    { 
+      _id: '2', 
+      id: '2',
+      firstName: 'Sarah', 
+      lastName: 'Johnson', 
+      specialization: 'General Physician', 
+      experience: '12',
+      workingHours: { start: '10:00', end: '18:00' },
+      consultationDuration: 30
+    },
+    { 
+      _id: '3', 
+      id: '3',
+      firstName: 'Michael', 
+      lastName: 'Brown', 
+      specialization: 'Cardiologist', 
+      experience: '20',
+      workingHours: { start: '09:00', end: '16:00' },
+      consultationDuration: 30
+    },
   ];
 
   useEffect(() => {
@@ -67,77 +69,157 @@ const AppointmentForm = () => {
   useEffect(() => {
     if (formData.doctorId && formData.appointmentDate) {
       fetchAvailableSlots();
+    } else {
+      setAvailableSlots([]);
+      setFormData(prev => ({ ...prev, appointmentTime: '' }));
     }
   }, [formData.doctorId, formData.appointmentDate]);
 
   const fetchDoctors = async () => {
     try {
-      // Try to fetch from API first via doctorService
+      setFetchingDoctors(true);
+      console.log('Fetching doctors from API...');
+      
       const response = await doctorService.getAll();
-      // doctorService returns backend payload { success, doctors } or an array
-      const list = (response && response.doctors) ? response.doctors : (Array.isArray(response) ? response : mockDoctors);
-      setDoctors(list || mockDoctors);
+      console.log('Doctors API response:', response);
+      
+      let doctorsList = [];
+      
+      // Handle different response structures
+      if (response && response.success !== false) {
+        if (response.doctors && Array.isArray(response.doctors)) {
+          doctorsList = response.doctors;
+        } else if (Array.isArray(response)) {
+          doctorsList = response;
+        }
+      }
+      
+      if (doctorsList.length === 0) {
+        console.warn('No doctors found from API, using mock data');
+        doctorsList = mockDoctors;
+      }
+      
+      // Ensure each doctor has required fields
+      doctorsList = doctorsList.map(doctor => ({
+        _id: doctor._id || doctor.id,
+        id: doctor._id || doctor.id,
+        firstName: doctor.firstName || '',
+        lastName: doctor.lastName || '',
+        specialization: doctor.specialization || doctor.doctDptmnt || doctor.doctrDptmnt || 'General Physician',
+        experience: doctor.experience || '5',
+        qualification: doctor.qualification || 'MBBS',
+        workingHours: doctor.workingHours || { start: '09:00', end: '17:00' },
+        consultationDuration: doctor.consultationDuration || 30,
+        description: doctor.description || `Experienced ${doctor.specialization || 'doctor'} with ${doctor.experience || '5'} years of experience.`,
+        rating: doctor.rating || '4.5'
+      }));
+      
+      setDoctors(doctorsList);
+      console.log(`Loaded ${doctorsList.length} doctors`);
+      toast.success(`Loaded ${doctorsList.length} doctors`);
     } catch (error) {
-      console.warn('Using mock doctors data due to API error:', error);
+      console.error('Error fetching doctors:', error);
+      toast.warning('Using fallback doctor data');
       setDoctors(mockDoctors);
+    } finally {
+      setFetchingDoctors(false);
     }
   };
 
-
-  const fetchAvailableSlots = () => {
-    // Simulate API call delay
-    setTimeout(() => {
-      const today = new Date().toISOString().split('T')[0];
-      const isToday = formData.appointmentDate === today;
+  const fetchAvailableSlots = async () => {
+    if (!formData.doctorId || !formData.appointmentDate) return;
+    
+    setCheckingAvailability(true);
+    setAvailableSlots([]);
+    setFormData(prev => ({ ...prev, appointmentTime: '' }));
+    
+    try {
+      console.log(`Fetching slots for doctor ${formData.doctorId} on ${formData.appointmentDate}`);
       
-      // If booking for today, only show future slots
-      let available = [];
-      if (isToday) {
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
+      const response = await appointmentService.getAvailableSlots(
+        formData.doctorId, 
+        formData.appointmentDate
+      );
+      
+      console.log('Slots API response:', response);
+      
+      if (response.success && response.available) {
+        setAvailableSlots(response.slots || []);
         
-        available = timeSlots.filter(slot => {
-          const [time, period] = slot.split(' ');
-          let [hours, minutes] = time.split(':').map(Number);
-          
-          if (period === 'PM' && hours !== 12) hours += 12;
-          if (period === 'AM' && hours === 12) hours = 0;
-          
-          if (hours > currentHour || (hours === currentHour && minutes > currentMinute)) {
-            return true;
-          }
-          return false;
-        }).slice(0, 6); // Show only 6 available slots for today
+        if (response.slots.length === 0) {
+          toast.info('No available slots for this date. Please choose another date or doctor.');
+        } else {
+          toast.info(`Found ${response.slots.length} available slots`);
+        }
       } else {
-        available = timeSlots.slice(0, 8); // Show 8 slots for future dates
+        toast.error(response.message || 'Doctor not available for this date');
+        setAvailableSlots([]);
+      }
+    } catch (error) {
+      console.error('Error fetching available slots:', error);
+      toast.error('Failed to check availability. Please try again.');
+      setAvailableSlots([]);
+      
+      // Fallback: Generate time slots
+      const generatedSlots = generateTimeSlots();
+      setAvailableSlots(generatedSlots);
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
+  const generateTimeSlots = () => {
+    const selectedDoctor = doctors.find(d => d._id === formData.doctorId);
+    const workingHours = selectedDoctor?.workingHours || { start: '09:00', end: '17:00' };
+    const duration = selectedDoctor?.consultationDuration || 30;
+    
+    const slots = [];
+    const isToday = formData.appointmentDate === new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    const [startHour, startMinute] = workingHours.start.split(':').map(Number);
+    const [endHour, endMinute] = workingHours.end.split(':').map(Number);
+    
+    let currentHourSlot = startHour;
+    let currentMinuteSlot = startMinute;
+    
+    while (currentHourSlot < endHour || (currentHourSlot === endHour && currentMinuteSlot < endMinute)) {
+      const period = currentHourSlot >= 12 ? 'PM' : 'AM';
+      const displayHour = currentHourSlot % 12 || 12;
+      const timeString = `${displayHour}:${currentMinuteSlot.toString().padStart(2, '0')} ${period}`;
+      
+      // If today, only show future slots (with 30 min buffer)
+      if (!isToday || (currentHourSlot > currentHour) || (currentHourSlot === currentHour && currentMinuteSlot > currentMinute + 30)) {
+        slots.push(timeString);
       }
       
-      setAvailableSlots(available);
-      
-      // Reset appointment time if current selection is not available
-      if (formData.appointmentTime && !available.includes(formData.appointmentTime)) {
-        setFormData(prev => ({ ...prev, appointmentTime: '' }));
-        toast.info('Previously selected time is no longer available');
+      // Increment by consultation duration
+      currentMinuteSlot += duration;
+      if (currentMinuteSlot >= 60) {
+        currentHourSlot += Math.floor(currentMinuteSlot / 60);
+        currentMinuteSlot = currentMinuteSlot % 60;
       }
-    }, 300);
+    }
+    
+    return slots.slice(0, 12); // Return max 12 slots
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    // Special handling for department change - reset doctor
-    if (name === 'department') {
+    if (name === 'appointmentDate') {
       setFormData(prev => ({
         ...prev,
         [name]: value,
-        doctorId: '',
         appointmentTime: ''
       }));
-    } else if (name === 'appointmentDate') {
+    } else if (name === 'doctorId') {
       setFormData(prev => ({
         ...prev,
         [name]: value,
+        appointmentDate: '',
         appointmentTime: ''
       }));
     } else {
@@ -160,6 +242,7 @@ const AppointmentForm = () => {
           dob: 'Date of Birth',
           gender: 'Gender'
         };
+        
         for (const field of requiredFields) {
           const value = String(formData[field] || '').trim();
           if (!value) {
@@ -170,20 +253,20 @@ const AppointmentForm = () => {
         
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(String(formData.email || '')) ) {
+        if (!emailRegex.test(formData.email)) {
           toast.error('Please enter a valid email address');
           return false;
         }
         
         // Phone validation
         const phoneRegex = /^\d{10}$/;
-        if (!phoneRegex.test(String(formData.phone || '')) ) {
+        if (!phoneRegex.test(formData.phone)) {
           toast.error('Please enter a valid 10-digit phone number');
           return false;
         }
         
         // Date of birth validation
-        const dob = new Date(String(formData.dob || ''));
+        const dob = new Date(formData.dob);
         const today = new Date();
         if (dob >= today) {
           toast.error('Please enter a valid date of birth');
@@ -193,9 +276,8 @@ const AppointmentForm = () => {
         return true;
       },
       2: () => {
-        const requiredFields = ['department', 'doctorId', 'appointmentDate', 'appointmentTime'];
+        const requiredFields = ['doctorId', 'appointmentDate', 'appointmentTime'];
         const fieldLabels = {
-          department: 'Department',
           doctorId: 'Doctor',
           appointmentDate: 'Appointment Date',
           appointmentTime: 'Appointment Time'
@@ -203,7 +285,7 @@ const AppointmentForm = () => {
         
         for (const field of requiredFields) {
           const value = formData[field];
-          if (value === null || value === undefined || String(value).trim() === '') {
+          if (!value || String(value).trim() === '') {
             toast.error(`Please select ${fieldLabels[field]}`);
             return false;
           }
@@ -216,6 +298,12 @@ const AppointmentForm = () => {
         
         if (selectedDate < today) {
           toast.error('Please select a future date');
+          return false;
+        }
+        
+        // Check if selected time is in available slots
+        if (availableSlots.length > 0 && !availableSlots.includes(formData.appointmentTime)) {
+          toast.error('Selected time slot is no longer available. Please choose another time.');
           return false;
         }
         
@@ -259,21 +347,24 @@ const AppointmentForm = () => {
           gender: formData.gender,
         },
         appointment: {
-          department: formData.department,
           doctorId: formData.doctorId,
           doctorName: `Dr. ${selectedDoctor.firstName} ${selectedDoctor.lastName}`,
-          doctorSpecialization: selectedDoctor.specialization || selectedDoctor.doctDptmnt,
+          doctorSpecialization: selectedDoctor.specialization,
           date: formData.appointmentDate,
           time: formData.appointmentTime,
           symptoms: formData.symptoms,
           hasVisited: formData.previousHistory,
-          insuranceProvider: formData.insurance,
           emergencyContact: formData.emergencyContact,
+          department: selectedDoctor.specialization || 'General Physician'
         }
       };
 
-      // Save appointment via API (must be authenticated as patient)
+      console.log('Submitting appointment:', appointmentData);
+      
+      // Save appointment via API
       const response = await appointmentService.create(appointmentData);
+      console.log('Appointment response:', response);
+      
       toast.success(response.message || 'Appointment booked successfully!');
       
       // Redirect to confirmation page
@@ -282,10 +373,10 @@ const AppointmentForm = () => {
           state: {
             appointmentId: response.appointment?._id || 'APPT' + Date.now(),
             patientName: `${formData.firstName} ${formData.lastName}`,
-            department: formData.department,
             date: formData.appointmentDate,
             time: formData.appointmentTime,
             doctor: `Dr. ${selectedDoctor.firstName} ${selectedDoctor.lastName}`,
+            specialization: selectedDoctor.specialization,
             appointmentNumber: response.appointment?.appointmentNumber || 'APT-' + Math.floor(100000 + Math.random() * 900000),
             symptoms: formData.symptoms,
             email: formData.email,
@@ -296,22 +387,22 @@ const AppointmentForm = () => {
 
     } catch (error) {
       console.error('Appointment booking error:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to book appointment. Please try again.');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to book appointment. Please try again.';
+      toast.error(errorMessage);
+      
+      // If unauthorized, redirect to login
+      if (error.response?.status === 401) {
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const getFilteredDoctors = () => {
-    const source = (doctors && doctors.length) ? doctors : mockDoctors;
-    if (!formData.department) return source;
-
-    return source.filter(doctor => {
-      // accept multiple possible field names (doctrDptmnt, doctDptmnt, department)
-      const deptFields = [doctor.doctrDptmnt, doctor.doctDptmnt, doctor.department, doctor.specialization];
-      return deptFields.some(d => d === formData.department);
-    });
-  };
+  // Get the selected doctor for preview
+  const selectedDoctor = formData.doctorId ? doctors.find(d => d._id === formData.doctorId) : null;
 
   return (
     <section className="appointment-form-section">
@@ -330,7 +421,7 @@ const AppointmentForm = () => {
               <div className={`progress-line ${currentStep >= 2 ? 'active' : ''}`}></div>
               <div className={`step ${currentStep >= 2 ? 'active' : ''}`}>
                 <div className="step-number">2</div>
-                <div className="step-label">Appointment Details</div>
+                <div className="step-label">Doctor & Time</div>
               </div>
               <div className={`progress-line ${currentStep >= 3 ? 'active' : ''}`}></div>
               <div className={`step ${currentStep >= 3 ? 'active' : ''}`}>
@@ -431,48 +522,67 @@ const AppointmentForm = () => {
 
           {currentStep === 2 && (
             <div className="form-section active">
-              <h3 className="section-title">Appointment Details</h3>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label htmlFor="department">Department *</label>
-                  <select
-                    id="department"
-                    name="department"
-                    value={formData.department}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Select Department</option>
-                    {departments.map(dept => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="doctorId">Select Doctor *</label>
-                  <select
-                    id="doctorId"
-                    name="doctorId"
-                    value={formData.doctorId}
-                    onChange={handleChange}
-                    disabled={!formData.department}
-                    required
-                  >
-                    <option value="">Select Doctor</option>
-                    {getFilteredDoctors().map(doctor => (
+              <h3 className="section-title">Select Doctor & Appointment Time</h3>
+              
+              {/* Doctor Selection */}
+              <div className="form-group full-width">
+                <label htmlFor="doctorId">Select Doctor *</label>
+                <select
+                  id="doctorId"
+                  name="doctorId"
+                  value={formData.doctorId}
+                  onChange={handleChange}
+                  disabled={fetchingDoctors}
+                  required
+                >
+                  <option value="">Choose a Doctor</option>
+                  {fetchingDoctors ? (
+                    <option value="" disabled>Loading doctors...</option>
+                  ) : doctors.length > 0 ? (
+                    doctors.map(doctor => (
                       <option key={doctor._id} value={doctor._id}>
-                        Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialization || doctor.doctDptmnt || doctor.department}
-                        {doctor.experience ? ` (${doctor.experience} years exp)` : ''}
+                        Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialization}
+                        {doctor.experience ? ` (${doctor.experience} years experience)` : ''}
                       </option>
-                    ))}
-                    {getFilteredDoctors().length === 0 && formData.department && (
-                      <option value="" disabled>No doctors available in this department</option>
-                    )}
-                  </select>
-                  {getFilteredDoctors().length === 0 && formData.department && (
-                    <small className="hint error">Please select another department or check back later</small>
+                    ))
+                  ) : (
+                    <option value="" disabled>No doctors available</option>
                   )}
+                </select>
+                {!fetchingDoctors && doctors.length === 0 && (
+                  <small className="hint error">No doctors available at the moment. Please check back later.</small>
+                )}
+              </div>
+              
+              {/* Doctor Preview Card */}
+              {selectedDoctor && (
+                <div className="doctor-preview-card">
+                  <div className="doctor-avatar-large">
+                    {selectedDoctor.firstName?.charAt(0)}{selectedDoctor.lastName?.charAt(0)}
+                  </div>
+                  <div className="doctor-details">
+                    <h4>Dr. {selectedDoctor.firstName} {selectedDoctor.lastName}</h4>
+                    <p className="specialty">{selectedDoctor.specialization}</p>
+                    {selectedDoctor.experience && (
+                      <p className="experience">📅 {selectedDoctor.experience} years experience</p>
+                    )}
+                    {selectedDoctor.qualification && (
+                      <p className="qualification">🎓 {selectedDoctor.qualification}</p>
+                    )}
+                    {selectedDoctor.workingHours && (
+                      <p className="availability">
+                        ⏰ Available: {selectedDoctor.workingHours.start} - {selectedDoctor.workingHours.end}
+                      </p>
+                    )}
+                    {selectedDoctor.rating && (
+                      <p className="rating">⭐ {selectedDoctor.rating}/5 rating</p>
+                    )}
+                  </div>
                 </div>
+              )}
+              
+              {/* Date and Time Selection */}
+              <div className="form-grid">
                 <div className="form-group">
                   <label htmlFor="appointmentDate">Appointment Date *</label>
                   <input
@@ -482,8 +592,12 @@ const AppointmentForm = () => {
                     value={formData.appointmentDate}
                     onChange={handleChange}
                     min={new Date().toISOString().split('T')[0]}
+                    disabled={!formData.doctorId}
                     required
                   />
+                  {!formData.doctorId && (
+                    <small className="hint">Please select a doctor first</small>
+                  )}
                 </div>
                 <div className="form-group">
                   <label htmlFor="appointmentTime">Preferred Time *</label>
@@ -492,18 +606,30 @@ const AppointmentForm = () => {
                     name="appointmentTime"
                     value={formData.appointmentTime}
                     onChange={handleChange}
-                    disabled={!formData.doctorId || !formData.appointmentDate || availableSlots.length === 0}
+                    disabled={!formData.doctorId || !formData.appointmentDate || availableSlots.length === 0 || checkingAvailability}
                     required
                   >
                     <option value="">Select Time Slot</option>
-                    {availableSlots.map(slot => (
-                      <option key={slot} value={slot}>{slot}</option>
-                    ))}
-                    {availableSlots.length === 0 && formData.doctorId && formData.appointmentDate && (
-                      <option value="" disabled>No slots available for this date</option>
+                    {checkingAvailability ? (
+                      <option value="" disabled>Checking availability...</option>
+                    ) : availableSlots.length > 0 ? (
+                      availableSlots.map(slot => (
+                        <option key={slot} value={slot}>{slot}</option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        {formData.doctorId && formData.appointmentDate 
+                          ? 'No slots available for this date' 
+                          : 'Select doctor and date first'}
+                      </option>
                     )}
                   </select>
-                  {formData.doctorId && formData.appointmentDate && (
+                  {checkingAvailability && (
+                    <small className="hint checking">
+                      <span className="spinner-small"></span> Checking doctor's availability...
+                    </small>
+                  )}
+                  {!checkingAvailability && formData.doctorId && formData.appointmentDate && (
                     <small className="hint">
                       {availableSlots.length} slot{availableSlots.length !== 1 ? 's' : ''} available
                     </small>
@@ -511,28 +637,20 @@ const AppointmentForm = () => {
                 </div>
               </div>
               
-              {/* Doctor Info Preview */}
-              {formData.doctorId && (
-                <div className="doctor-preview">
-                  <h4>Selected Doctor:</h4>
-                  {(() => {
-                    const doctor = doctors.find(d => d._id === formData.doctorId);
-                    if (!doctor) return null;
-                    return (
-                      <div className="doctor-info-card">
-                        <div className="doctor-avatar">
-                          {doctor.firstName?.charAt(0)}{doctor.lastName?.charAt(0)}
-                        </div>
-                        <div className="doctor-details">
-                          <h5>Dr. {doctor.firstName} {doctor.lastName}</h5>
-                          <p className="specialty">{doctor.specialization || doctor.doctDptmnt}</p>
-                          {doctor.experience && (
-                            <p className="experience">{doctor.experience} years experience</p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
+              {/* Availability Status */}
+              {formData.doctorId && formData.appointmentDate && !checkingAvailability && (
+                <div className="availability-status">
+                  {availableSlots.length > 0 ? (
+                    <div className="status-available">
+                      <span className="status-icon">✅</span>
+                      <span>Doctor is available on {formData.appointmentDate}</span>
+                    </div>
+                  ) : (
+                    <div className="status-unavailable">
+                      <span className="status-icon">❌</span>
+                      <span>Doctor is not available on {formData.appointmentDate}. Please choose another date.</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -541,7 +659,7 @@ const AppointmentForm = () => {
           {currentStep === 3 && (
             <div className="form-section active">
               <h3 className="section-title">Additional Information</h3>
-              <div className="form-group">
+              <div className="form-group full-width">
                 <label htmlFor="symptoms">Symptoms / Reason for Visit</label>
                 <textarea
                   id="symptoms"
@@ -554,17 +672,6 @@ const AppointmentForm = () => {
                 <small className="hint">Please be as detailed as possible to help your doctor prepare</small>
               </div>
               <div className="form-grid">
-                <div className="form-group">
-                  <label htmlFor="insurance">Insurance Provider (Optional)</label>
-                  <input
-                    type="text"
-                    id="insurance"
-                    name="insurance"
-                    value={formData.insurance}
-                    onChange={handleChange}
-                    placeholder="e.g., Blue Cross, Aetna, Medicare"
-                  />
-                </div>
                 <div className="form-group">
                   <label htmlFor="emergencyContact">Emergency Contact (Optional)</label>
                   <input
@@ -603,8 +710,16 @@ const AppointmentForm = () => {
                     <span className="summary-value">{formData.appointmentDate} at {formData.appointmentTime}</span>
                   </div>
                   <div className="summary-item">
-                    <span className="summary-label">Department:</span>
-                    <span className="summary-value">{formData.department}</span>
+                    <span className="summary-label">Doctor:</span>
+                    <span className="summary-value">
+                      {selectedDoctor ? `Dr. ${selectedDoctor.firstName} ${selectedDoctor.lastName}` : 'Not selected'}
+                    </span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">Specialization:</span>
+                    <span className="summary-value">
+                      {selectedDoctor ? selectedDoctor.specialization : 'Not selected'}
+                    </span>
                   </div>
                   <div className="summary-item">
                     <span className="summary-label">Contact:</span>
@@ -636,7 +751,7 @@ const AppointmentForm = () => {
                   className="btn btn-primary"
                   onClick={nextStep}
                 >
-                  Continue to {currentStep === 1 ? 'Appointment Details' : 'Additional Info'} →
+                  Continue to {currentStep === 1 ? 'Doctor & Time Selection' : 'Additional Info'} →
                 </button>
               ) : (
                 <button
@@ -647,7 +762,7 @@ const AppointmentForm = () => {
                   {loading ? (
                     <>
                       <span className="spinner"></span>
-                      Processing...
+                      Booking Appointment...
                     </>
                   ) : (
                     'Confirm & Book Appointment'

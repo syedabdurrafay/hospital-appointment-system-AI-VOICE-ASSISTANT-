@@ -3,103 +3,71 @@ import { Link } from 'react-router-dom';
 import './Departments.css';
 
 const Departments = () => {
-  const departments = [
+  const services = [
     {
       id: 1,
-      name: 'Cardiology',
-      icon: '❤️',
-      description: 'Comprehensive heart care and advanced cardiovascular treatments',
-      doctors: 18,
-      color: '#c62828'
+      name: 'General Consultation',
+      icon: '🩺',
+      description: 'Comprehensive health check-ups and consultations',
+      doctors: 3,
+      color: '#667eea'
     },
     {
       id: 2,
-      name: 'Neurology',
-      icon: '🧠',
-      description: 'Specialized care for brain and nervous system disorders',
-      doctors: 14,
-      color: '#1565c0'
+      name: 'Emergency Care',
+      icon: '🚨',
+      description: '24/7 emergency medical services',
+      doctors: 2,
+      color: '#ff6b6b'
     },
     {
       id: 3,
-      name: 'Orthopedics',
-      icon: '🦴',
-      description: 'Advanced bone, joint, and musculoskeletal treatments',
-      doctors: 16,
-      color: '#2e7d32'
+      name: 'Diagnostics',
+      icon: '🔬',
+      description: 'Laboratory tests and diagnostic services',
+      doctors: 1,
+      color: '#4ecdc4'
     },
     {
       id: 4,
-      name: 'Pediatrics',
-      icon: '👶',
-      description: 'Comprehensive healthcare for children and adolescents',
-      doctors: 22,
-      color: '#ef6c00'
-    },
-    {
-      id: 5,
-      name: 'Dermatology',
-      icon: '🌟',
-      description: 'Expert skin care and cosmetic treatments',
-      doctors: 12,
-      color: '#6a1b9a'
-    },
-    {
-      id: 6,
-      name: 'Oncology',
-      icon: '🩺',
-      description: 'Advanced cancer care and comprehensive treatment plans',
-      doctors: 15,
-      color: '#00695c'
-    },
-    {
-      id: 7,
-      name: 'Gynecology',
-      icon: '🌸',
-      description: "Comprehensive women's health and specialized care",
-      doctors: 13,
-      color: '#ad1457'
-    },
-    {
-      id: 8,
-      name: 'ENT',
-      icon: '👂',
-      description: 'Specialized ear, nose, and throat care and treatments',
-      doctors: 11,
-      color: '#4e342e'
+      name: 'Follow-up Care',
+      icon: '📋',
+      description: 'Post-treatment monitoring and care',
+      doctors: 2,
+      color: '#ffcc5c'
     }
   ];
 
-  const [activeDept, setActiveDept] = useState(departments[0]);
+  const [activeService, setActiveService] = useState(services[0]);
 
   return (
-    <section className="departments" id="departments">
+    <section className="departments" id="services">
       <div className="container">
         <div className="section-header">
-          <h2 className="section-title">Medical Specialties</h2>
+          <h2 className="section-title">Our Services</h2>
           <p className="section-subtitle">
-            High-quality healthcare services across all major medical disciplines
+            Comprehensive healthcare services for all your medical needs
           </p>
         </div>
 
         <div className="departments-grid">
           <div className="departments-list">
-            {departments.map(dept => (
+            {services.map(service => (
               <div
-                key={dept.id}
-                className={`department-card ${activeDept.id === dept.id ? 'active' : ''}`}
-                onClick={() => setActiveDept(dept)}
-                style={{ '--dept-color': dept.color }}
+                key={service.id}
+                className={`department-card ${activeService.id === service.id ? 'active' : ''}`}
+                onClick={() => setActiveService(service)}
+                style={{ '--dept-color': service.color }}
               >
                 <div className="card-header">
-                  <div className="dept-icon" style={{ backgroundColor: `${dept.color}22` }}>
-                    <span>{dept.icon}</span>
+                  <div className="dept-icon" style={{ backgroundColor: `${service.color}22` }}>
+                    <span>{service.icon}</span>
                   </div>
 
                   <div className="dept-info">
-                    <h3 className="dept-name">{dept.name}</h3>
+                    <h3 className="dept-name">{service.name}</h3>
                     <div className="dept-stats">
-                      <span className="stat">{dept.doctors} Specialists</span>
+                      <span className="stat">{service.doctors} Doctor{service.doctors > 1 ? 's' : ''}</span>
                       <span className="view-arrow">➜</span>
                     </div>
                   </div>
@@ -113,25 +81,25 @@ const Departments = () => {
               <div
                 className="detail-icon"
                 style={{
-                  backgroundColor: `${activeDept.color}22`,
-                  color: activeDept.color
+                  backgroundColor: `${activeService.color}22`,
+                  color: activeService.color
                 }}
               >
-                {activeDept.icon}
+                {activeService.icon}
               </div>
 
               <div>
-                <h3 className="detail-title">{activeDept.name}</h3>
-                <p className="detail-description">{activeDept.description}</p>
+                <h3 className="detail-title">{activeService.name}</h3>
+                <p className="detail-description">{activeService.description}</p>
               </div>
             </div>
 
             <div className="detail-features">
               {[
-                ['👨‍⚕️', 'Expert Specialists', `${activeDept.doctors}+ certified doctors`],
-                ['🏥', 'Modern Facilities', 'Advanced medical equipment'],
-                ['📅', 'Fast Appointments', 'Same-week scheduling'],
-                ['🏆', 'Trusted Care', '98% patient satisfaction']
+                ['👨‍⚕️', 'Expert Doctors', `${activeService.doctors}+ qualified doctors`],
+                ['🏥', 'Modern Facilities', 'Well-equipped examination rooms'],
+                ['📅', 'Easy Booking', 'Online and phone appointments'],
+                ['🏆', 'Quality Care', 'Personalized treatment plans']
               ].map((item, index) => (
                 <div className="feature" key={index}>
                   <div className="feature-icon">{item[0]}</div>
@@ -147,20 +115,8 @@ const Departments = () => {
               <Link to="/appointment" className="btn btn-primary">
                 Book Appointment
               </Link>
-              <Link
-                to={`/department/${activeDept.name.toLowerCase()}`}
-                className="btn btn-outline"
-              >
-                Learn More
-              </Link>
             </div>
           </div>
-        </div>
-
-        <div className="view-all">
-          <Link to="/departments" className="btn btn-secondary">
-            View All Departments
-          </Link>
         </div>
       </div>
     </section>
