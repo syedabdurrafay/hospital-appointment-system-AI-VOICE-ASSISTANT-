@@ -7,7 +7,7 @@ const Home = () => {
   return (
     <div className="home-page">
       <Hero />
-      
+
       {/* AI Assistant Features */}
       <section className="ai-features-section">
         <div className="container">
@@ -15,7 +15,7 @@ const Home = () => {
             <h2 className="section-title">How Our AI Assistant Works</h2>
             <p className="section-subtitle">Intelligent automation designed specifically for small GP practices</p>
           </div>
-          
+
           <div className="ai-workflow">
             <div className="workflow-step">
               <div className="step-number">1</div>
@@ -29,7 +29,7 @@ const Home = () => {
                 </ul>
               </div>
             </div>
-            
+
             <div className="workflow-step">
               <div className="step-number">2</div>
               <div className="step-content">
@@ -42,7 +42,7 @@ const Home = () => {
                 </ul>
               </div>
             </div>
-            
+
             <div className="workflow-step">
               <div className="step-number">3</div>
               <div className="step-content">
@@ -55,7 +55,7 @@ const Home = () => {
                 </ul>
               </div>
             </div>
-            
+
             <div className="workflow-step">
               <div className="step-number">4</div>
               <div className="step-content">
@@ -71,7 +71,7 @@ const Home = () => {
           </div>
         </div>
       </section>
-      
+
       {/* Demo Preview Section */}
       <section className="demo-preview-section">
         <div className="container">
@@ -82,7 +82,7 @@ const Home = () => {
               <div className="demo-features">
                 <div className="demo-feature">
                   <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <div>
                     <strong>Full Call Flow Demo</strong>
@@ -91,7 +91,7 @@ const Home = () => {
                 </div>
                 <div className="demo-feature">
                   <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <div>
                     <strong>Waitlist Automation</strong>
@@ -100,7 +100,7 @@ const Home = () => {
                 </div>
                 <div className="demo-feature">
                   <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <div>
                     <strong>Doctor Summary View</strong>
@@ -108,9 +108,9 @@ const Home = () => {
                   </div>
                 </div>
               </div>
-              <Link to="/demo" className="btn btn-primary">
+              <Link to="/dashboard" className="btn btn-primary">
                 <svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"/>
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                 </svg>
                 Launch Demo
               </Link>
@@ -126,7 +126,7 @@ const Home = () => {
                   <span>agent_output.json</span>
                 </div>
                 <pre className="code-content">
-{`{
+                  {`{
   "intent": "appointment",
   "confidence": 0.96,
   "slots": {
@@ -157,7 +157,7 @@ const Home = () => {
           </div>
         </div>
       </section>
-      
+
       {/* Privacy & Security */}
       <section className="privacy-section">
         <div className="container">
@@ -168,25 +168,25 @@ const Home = () => {
               <div className="privacy-features">
                 <div className="privacy-feature">
                   <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <span>EU Data Hosting (Germany)</span>
                 </div>
                 <div className="privacy-feature">
                   <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <span>End-to-End Encryption</span>
                 </div>
                 <div className="privacy-feature">
                   <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <span>Consent-Based Processing</span>
                 </div>
                 <div className="privacy-feature">
                   <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <span>Full Audit Logging</span>
                 </div>
@@ -195,16 +195,16 @@ const Home = () => {
             <div className="privacy-visual">
               <div className="shield-icon">
                 <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="50" cy="50" r="45" fill="var(--primary-100)" stroke="var(--primary-300)" strokeWidth="2"/>
-                  <path d="M50 20L20 35V50C20 70 35 85 50 90C65 85 80 70 80 50V35L50 20Z" fill="var(--primary-50)" stroke="var(--primary-600)" strokeWidth="2"/>
-                  <path d="M40 50L45 55L60 40" stroke="var(--primary-600)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="50" cy="50" r="45" fill="var(--primary-100)" stroke="var(--primary-300)" strokeWidth="2" />
+                  <path d="M50 20L20 35V50C20 70 35 85 50 90C65 85 80 70 80 50V35L50 20Z" fill="var(--primary-50)" stroke="var(--primary-600)" strokeWidth="2" />
+                  <path d="M40 50L45 55L60 40" stroke="var(--primary-600)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
             </div>
           </div>
         </div>
       </section>
-      
+
       {/* CTA Section */}
       <section className="home-cta-section">
         <div className="container">
@@ -212,9 +212,9 @@ const Home = () => {
             <h2>Ready to Automate Your Practice?</h2>
             <p>Join the AI revolution in healthcare. Reduce call volume, eliminate scheduling errors, and focus on patient care.</p>
             <div className="cta-actions">
-              <Link to="/demo" className="btn btn-primary btn-lg">
+              <Link to="/dashboard" className="btn btn-primary btn-lg">
                 <svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"/>
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                 </svg>
                 Try Free Demo
               </Link>

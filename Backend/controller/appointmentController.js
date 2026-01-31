@@ -177,8 +177,6 @@ export const getAvailableAppointmentSlots = catchAsyncErrors(async (req, res, ne
 // Get appointment slots for a doctor - SINGLE DEFINITION
 export const getAppointmentSlots = catchAsyncErrors(async (req, res, next) => {
     console.log('GET /appointment/slots/:doctorId called');
-    console.log('Params:', req.params);
-    console.log('Query:', req.query);
 
     const { doctorId } = req.params;
     const { date } = req.query;
@@ -232,10 +230,8 @@ export const getAppointmentSlots = catchAsyncErrors(async (req, res, next) => {
 // Create a new appointment with availability check
 export const postAppointment = catchAsyncErrors(async (req, res, next) => {
     console.log('POST /appointment/post called');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-    console.log('User:', req.user ? req.user.email : 'No user');
 
-    // Normalize request body - handle different data structures
+    // Normalize request body
     let payload = req.body;
     let patientData = {};
     let appointmentData = {};
@@ -306,7 +302,22 @@ export const postAppointment = catchAsyncErrors(async (req, res, next) => {
     // Check slot availability
     const availableSlots = await getAvailableSlots(doctorId, appointmentData.date);
     if (!availableSlots.includes(time24Format)) {
-        return next(new ErrorHandler('Selected time slot is not available', 400));
+        // SUGGEST SLOTS
+        console.log(`Slot ${time24Format} is taken. Returning suggestions.`);
+        const formattedSlots = availableSlots.map(slot => {
+            const [hours, minutes] = slot.split(':').map(Number);
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+        });
+
+        return res.status(409).json({
+            success: false,
+            message: `Selected time slot ${appointmentData.time} is already booked.`,
+            errorType: "SLOT_BOOKED",
+            availableSlots: formattedSlots,
+            suggestionMessage: `Please choose another slot. Available slots: ${formattedSlots.slice(0, 5).join(', ')}...`
+        });
     }
 
     // Check doctor availability
@@ -317,7 +328,6 @@ export const postAppointment = catchAsyncErrors(async (req, res, next) => {
 
     const patientId = req.user?._id;
     if (!patientId) {
-        console.log('No patient ID found in request');
         return next(new ErrorHandler('Patient authentication required', 401));
     }
 
@@ -372,7 +382,6 @@ export const postAppointment = catchAsyncErrors(async (req, res, next) => {
         );
 
         await Promise.all(notifications);
-        console.log('Notifications sent successfully');
 
         res.status(200).json({
             success: true,
@@ -401,21 +410,46 @@ export const getAllAppointments = catchAsyncErrors(async (req, res, next) => {
             query = { doctorId: req.user._id };
         }
 
-        console.log('Fetching appointments with query:', query);
-
         const appointments = await Appointment.find(query)
             .populate('doctorId', 'firstName lastName email specialization doctDptmnt')
-            .populate('patientId', 'firstName lastName email phone')
+            .populate('patientId', 'firstName lastName email phone dob gender') // Populate more patient info
             .sort({ createdAt: -1 });
 
         console.log(`Found ${appointments.length} appointments`);
 
         const transformedAppointments = appointments.map(appointment => {
-            const patientName = `${appointment.patient?.firstName || ''} ${appointment.patient?.lastName || ''}`.trim() || 'Unknown Patient';
+            // Robust Patient Name Resolution
+            let patientName = 'Unknown Patient';
+            let patientFirst = '';
+            let patientLast = '';
+            let patientEmail = '';
+            let patientPhone = '';
 
-            const doctorFirstName = appointment.doctor?.firstName || appointment.doctorId?.firstName || '';
-            const doctorLastName = appointment.doctor?.lastName || appointment.doctorId?.lastName || '';
-            const doctorName = doctorFirstName ? `Dr. ${doctorFirstName} ${doctorLastName}`.trim() : 'No Doctor Assigned';
+            // Try from populated user
+            if (appointment.patientId) {
+                patientFirst = appointment.patientId.firstName;
+                patientLast = appointment.patientId.lastName;
+                patientName = `${patientFirst} ${patientLast}`.trim();
+                patientEmail = appointment.patientId.email;
+                patientPhone = appointment.patientId.phone;
+            }
+
+            // Try from snapshot if populated is missing or incomplete
+            if (appointment.patient && (!patientName || patientName === 'Unknown Patient')) {
+                patientFirst = appointment.patient.firstName || patientFirst;
+                patientLast = appointment.patient.lastName || patientLast;
+                patientName = (patientFirst && patientLast) ? `${patientFirst} ${patientLast}`.trim() : patientName;
+                patientEmail = appointment.patient.email || patientEmail;
+                patientPhone = appointment.patient.phone || patientPhone;
+            }
+
+            // Fallback
+            if (!patientName) patientName = 'Unknown Patient';
+
+            // Robust Doctor Name Resolution
+            const docFirst = appointment.doctor?.firstName || appointment.doctorId?.firstName || '';
+            const docLast = appointment.doctor?.lastName || appointment.doctorId?.lastName || '';
+            const doctorName = (docFirst && docLast) ? `Dr. ${docFirst} ${docLast}`.trim() : 'No Doctor Assigned';
 
             const doctorSpecialization = appointment.doctor?.specialization ||
                 appointment.doctorId?.specialization ||
@@ -426,13 +460,13 @@ export const getAllAppointments = catchAsyncErrors(async (req, res, next) => {
                 _id: appointment._id,
                 id: appointment._id.toString(),
                 patient: {
-                    firstName: appointment.patient?.firstName || '',
-                    lastName: appointment.patient?.lastName || '',
+                    firstName: patientFirst,
+                    lastName: patientLast,
                     name: patientName,
-                    email: appointment.patient?.email || '',
-                    phone: appointment.patient?.phone || '',
-                    dob: appointment.patient?.dob || '',
-                    gender: appointment.patient?.gender || ''
+                    email: patientEmail,
+                    phone: patientPhone,
+                    dob: appointment.patient?.dob || appointment.patientId?.dob || '',
+                    gender: appointment.patient?.gender || appointment.patientId?.gender || ''
                 },
                 appointment: {
                     date: appointment.appointment?.date || '',
@@ -445,8 +479,8 @@ export const getAllAppointments = catchAsyncErrors(async (req, res, next) => {
                 },
                 doctorId: appointment.doctorId,
                 doctor: {
-                    firstName: doctorFirstName,
-                    lastName: doctorLastName,
+                    firstName: docFirst,
+                    lastName: docLast,
                     specialization: doctorSpecialization,
                     fullName: doctorName
                 },
@@ -454,8 +488,8 @@ export const getAllAppointments = catchAsyncErrors(async (req, res, next) => {
                 status: appointment.status || 'Pending',
                 createdAt: appointment.createdAt,
                 patient_name: patientName,
-                patient_phone: appointment.patient?.phone || '',
-                patient_email: appointment.patient?.email || '',
+                patient_phone: patientPhone,
+                patient_email: patientEmail,
                 doctorName: doctorName,
                 department: appointment.appointment?.department || '',
                 date: appointment.appointment?.date || '',
@@ -475,7 +509,6 @@ export const getAllAppointments = catchAsyncErrors(async (req, res, next) => {
 
     } catch (error) {
         console.error('Error fetching appointments:', error);
-        // Explicitly return 500 with message to avoid 400 masking
         return next(new ErrorHandler(`Server Error: ${error.message}`, 500));
     }
 });
@@ -488,7 +521,7 @@ export const updateAppointmentStatus = catchAsyncErrors(async (req, res, next) =
         return next(new ErrorHandler('Authentication required', 401));
     }
 
-    let appointment = await Appointment.findById(id);
+    let appointment = await Appointment.findById(id).populate('patientId');
     if (!appointment) {
         return next(new ErrorHandler("Appointment not found!", 404));
     }
@@ -505,7 +538,7 @@ export const updateAppointmentStatus = catchAsyncErrors(async (req, res, next) =
     appointment = await Appointment.findByIdAndUpdate(id, req.body, {
         new: true,
         runValidators: true,
-    });
+    }).populate('patientId');
 
     if (req.body.status && req.body.status !== prevStatus) {
         try {
@@ -521,40 +554,23 @@ export const updateAppointmentStatus = catchAsyncErrors(async (req, res, next) =
             } else if (appointment.status === 'Accepted') {
                 notifBody = `Great news! Your appointment on ${appointment.appointment?.date || ''} at ${appointment.appointment?.time || ''} has been confirmed. Please arrive 15 minutes early.`;
             } else if (appointment.status === 'Cancelled') {
-                notifBody = `Your appointment on ${appointment.appointment?.date || ''} has been cancelled. ${adminMessage || 'Please book a new appointment if needed.'}`;
+                notifBody = `Your appointment on ${appointment.appointment?.date || ''} has been cancelled.`;
             }
 
-            await Notification.create({
-                userId: appointment.patientId,
-                title: `Appointment ${appointment.status}`,
-                body: notifBody,
-                data: {
-                    appointmentId: appointment._id,
-                    type: 'status_update',
-                    status: appointment.status,
-                    adminMessage,
-                    date: appointment.appointment?.date,
-                    time: appointment.appointment?.time
-                }
-            });
-
-            try {
-                const adminId = req.user?._id;
-                if (adminId) {
-                    await logAdminAction({
-                        adminId,
-                        action: 'update_appointment_status',
-                        targetType: 'Appointment',
-                        targetId: appointment._id,
-                        details: {
-                            status: appointment.status,
-                            previousStatus: prevStatus,
-                            adminMessage: adminMessage || undefined
-                        }
-                    });
-                }
-            } catch (e) {
-                console.error('Audit log failed:', e);
+            if (appointment.patientId) {
+                await Notification.create({
+                    userId: appointment.patientId._id || appointment.patientId,
+                    title: `Appointment ${appointment.status}`,
+                    body: notifBody,
+                    data: {
+                        appointmentId: appointment._id,
+                        type: 'status_update',
+                        status: appointment.status,
+                        adminMessage,
+                        date: appointment.appointment?.date,
+                        time: appointment.appointment?.time
+                    }
+                });
             }
         } catch (err) {
             console.error('Failed to create notification for status change:', err);
@@ -582,27 +598,6 @@ export const deleteAppointment = catchAsyncErrors(async (req, res, next) => {
     }
 
     await appointment.deleteOne();
-
-    try {
-        const adminId = req.user?._id;
-        if (adminId) {
-            await logAdminAction({
-                adminId,
-                action: 'delete_appointment',
-                targetType: 'Appointment',
-                targetId: appointment._id,
-                details: {
-                    patientName: `${appointment.patient?.firstName || ''} ${appointment.patient?.lastName || ''}`.trim(),
-                    date: appointment.appointment?.date,
-                    time: appointment.appointment?.time,
-                    department: appointment.appointment?.department,
-                    status: appointment.status
-                }
-            });
-        }
-    } catch (e) {
-        console.error('Audit log failed:', e);
-    }
 
     res.status(200).json({
         success: true,
@@ -658,20 +653,21 @@ export const cancelAppointment = catchAsyncErrors(async (req, res, next) => {
     await appointment.save();
 
     try {
-        await Notification.create({
-            userId: patientId,
-            title: 'Appointment Cancelled',
-            body: `You have cancelled your appointment on ${appointment.appointment?.date || ''}.`,
-            data: {
-                appointmentId: appointment._id,
-                type: 'appointment_cancelled',
-                cancelledBy: 'patient'
-            }
-        });
-
+        // Find admins for notification
         const admins = await User.find({ role: 'Admin' });
-        const adminNotifications = admins.map(admin =>
+
+        await Promise.all([
             Notification.create({
+                userId: patientId,
+                title: 'Appointment Cancelled',
+                body: `You have cancelled your appointment on ${appointment.appointment?.date || ''}.`,
+                data: {
+                    appointmentId: appointment._id,
+                    type: 'appointment_cancelled',
+                    cancelledBy: 'patient'
+                }
+            }),
+            ...admins.map(admin => Notification.create({
                 userId: admin._id,
                 title: 'Patient Cancelled Appointment',
                 body: `${appointment.patient?.firstName || 'Patient'} cancelled their appointment for ${appointment.appointment?.date || ''}`,
@@ -680,13 +676,13 @@ export const cancelAppointment = catchAsyncErrors(async (req, res, next) => {
                     type: 'appointment_cancelled_by_patient',
                     patientName: `${appointment.patient?.firstName || ''} ${appointment.patient?.lastName || ''}`.trim()
                 }
-            })
-        );
-        await Promise.all(adminNotifications);
+            }))
+        ]);
 
     } catch (e) {
         console.error('Notification failed:', e);
     }
+
 
     res.status(200).json({
         success: true,
@@ -695,7 +691,7 @@ export const cancelAppointment = catchAsyncErrors(async (req, res, next) => {
     });
 });
 
-// Admin confirms appointment
+// Admin/Doctor confirms appointment
 export const confirmAppointment = catchAsyncErrors(async (req, res, next) => {
     const { id } = req.params;
 
@@ -703,51 +699,40 @@ export const confirmAppointment = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler('Authentication required', 401));
     }
 
-    let appointment = await Appointment.findById(id);
+    let appointment = await Appointment.findById(id).populate('patientId');
     if (!appointment) return next(new ErrorHandler('Appointment not found!', 404));
 
     appointment.status = 'Accepted';
     appointment.confirmedAt = Date.now();
     await appointment.save();
 
-    try {
-        await Notification.create({
-            userId: appointment.patientId,
-            title: 'Appointment Confirmed!',
-            body: `Your appointment on ${appointment.appointment?.date || ''} at ${appointment.appointment?.time || ''} has been confirmed. Please arrive 15 minutes early.`,
-            data: {
-                appointmentId: appointment._id,
-                type: 'appointment_confirmed',
-                status: 'Accepted',
-                date: appointment.appointment?.date,
-                time: appointment.appointment?.time,
-                doctor: appointment.doctor?.firstName ? `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName || ''}` : 'Doctor'
-            }
-        });
+    console.log(`Appointment ${id} confirmed by ${req.user.role} ${req.user._id}`);
 
-        const adminId = req.user?._id;
-        if (adminId) {
-            await logAdminAction({
-                adminId,
-                action: 'confirm_appointment',
-                targetType: 'Appointment',
-                targetId: appointment._id,
-                details: {
-                    patientName: `${appointment.patient?.firstName || ''} ${appointment.patient?.lastName || ''}`.trim(),
+    try {
+        // Send notification
+        if (appointment.patientId) {
+            await Notification.create({
+                userId: appointment.patientId._id || appointment.patientId,
+                title: 'Appointment Confirmed!',
+                body: `Your appointment on ${appointment.appointment?.date || ''} at ${appointment.appointment?.time || ''} has been confirmed. Please arrive 15 minutes early.`,
+                data: {
+                    appointmentId: appointment._id,
+                    type: 'appointment_confirmed',
+                    status: 'Accepted',
                     date: appointment.appointment?.date,
-                    time: appointment.appointment?.time,
-                    department: appointment.appointment?.department
+                    time: appointment.appointment?.time
                 }
             });
         }
     } catch (e) {
-        console.error('Confirm notification/audit failed:', e);
+        console.error('Confirm notification failed:', e);
     }
 
     res.status(200).json({
         success: true,
         message: 'Appointment confirmed successfully!',
-        appointment
+        appointment,
+        status: 'Accepted'
     });
 });
 
@@ -799,20 +784,8 @@ export const getPatientStats = catchAsyncErrors(async (req, res, next) => {
 // Get appointment by ID
 export const getAppointmentById = catchAsyncErrors(async (req, res, next) => {
     const { id } = req.params;
-
-    // Allow patient to view their own appointment, or admin to view any
-    let query = { _id: id };
-    if (req.user && req.user.role === 'Patient') {
-        query.patientId = req.user._id;
-    }
-
-    const appointment = await Appointment.findOne(query)
-        .populate('doctorId', 'firstName lastName specialization doctDptmnt')
-        .populate('patientId', 'firstName lastName email phone');
-
-    if (!appointment) {
-        return next(new ErrorHandler("Appointment not found or you are not authorized to view it.", 404));
-    }
+    const appointment = await Appointment.findById(id).populate('doctorId').populate('patientId');
+    if (!appointment) return next(new ErrorHandler('Appointment not found', 404));
 
     res.status(200).json({
         success: true,
@@ -820,19 +793,8 @@ export const getAppointmentById = catchAsyncErrors(async (req, res, next) => {
     });
 });
 
-// Check doctor availability for a specific date (Simple boolean check)
 export const getDoctorAvailability = catchAsyncErrors(async (req, res, next) => {
     const { doctorId, date } = req.query;
-
-    if (!doctorId || !date) {
-        return next(new ErrorHandler('Doctor ID and Date are required', 400));
-    }
-
-    const availability = await checkDoctorAvailability(doctorId, date);
-
-    res.status(200).json({
-        success: true,
-        available: availability.available,
-        reason: availability.reason
-    });
+    const result = await checkDoctorAvailability(doctorId, date);
+    res.status(200).json({ success: true, ...result });
 });

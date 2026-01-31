@@ -6,7 +6,9 @@ import {
     HiUserGroup,
     HiClock,
     HiCheckCircle,
-    HiXCircle
+    HiXCircle,
+    HiEye,
+    HiUser
 } from 'react-icons/hi';
 import './Dashboard.css';
 
@@ -30,9 +32,9 @@ const DoctorDashboard = () => {
             setLoading(true);
             const data = await appointmentService.getAll();
 
-            if (data.success) {
-                setAppointments(data.appointments);
-                calculateStats(data.appointments);
+            if (data && data.success) {
+                setAppointments(data.appointments || []);
+                calculateStats(data.appointments || []);
             }
         } catch (error) {
             console.error('Error fetching appointments:', error);
@@ -44,21 +46,29 @@ const DoctorDashboard = () => {
     const calculateStats = (apps) => {
         const newStats = {
             total: apps.length,
-            pending: apps.filter(a => a.status === 'Pending').length,
-            approved: apps.filter(a => a.status === 'Accepted' || a.status === 'Approved').length,
-            cancelled: apps.filter(a => a.status === 'Cancelled' || a.status === 'Rejected').length
+            pending: apps.filter(a => (a.status || '').toLowerCase() === 'pending').length,
+            approved: apps.filter(a => {
+                const s = (a.status || '').toLowerCase();
+                return s === 'accepted' || s === 'approved' || s === 'confirmed';
+            }).length,
+            cancelled: apps.filter(a => {
+                const s = (a.status || '').toLowerCase();
+                return s === 'cancelled' || s === 'rejected';
+            }).length
         };
         setStats(newStats);
     };
 
     const getStatusColor = (status) => {
+        if (!status) return 'status-pending';
         switch (status.toLowerCase()) {
             case 'pending': return 'status-pending';
             case 'accepted':
-            case 'approved': return 'status-confirmed';
+            case 'approved':
+            case 'confirmed': return 'status-confirmed';
             case 'cancelled':
             case 'rejected': return 'status-cancelled';
-            default: return '';
+            default: return 'status-pending';
         }
     };
 
@@ -129,38 +139,95 @@ const DoctorDashboard = () => {
                     <table className="dashboard-table">
                         <thead>
                             <tr>
-                                <th>Patient</th>
-                                <th>Date</th>
-                                <th>Time</th>
+                                <th>Patient Details</th>
+                                <th>Date & Time</th>
                                 <th>Status</th>
+                                <th>Department</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {appointments.slice(0, 10).map((appointment) => (
-                                <tr key={appointment._id}>
-                                    <td>
-                                        <div className="patient-cell">
-                                            <div className="patient-avatar">
-                                                <HiUserGroup />
+                            {appointments.slice(0, 10).map((appointment) => {
+                                // 1. Determine Patient Name
+                                let pName = "Unknown Patient";
+                                if (appointment.patient_name) {
+                                    pName = appointment.patient_name;
+                                } else if (appointment.patient) {
+                                    const { firstName, lastName } = appointment.patient;
+                                    if (firstName) pName = `${firstName} ${lastName || ''}`.trim();
+                                } else if (appointment.firstName) {
+                                    pName = `${appointment.firstName} ${appointment.lastName || ''}`.trim();
+                                }
+
+                                // 2. Determine Patient Phone
+                                let pPhone = "No phone";
+                                if (appointment.patient_phone) {
+                                    pPhone = appointment.patient_phone;
+                                } else if (appointment.patient?.phone) {
+                                    pPhone = appointment.patient.phone;
+                                } else if (appointment.phone) {
+                                    pPhone = appointment.phone;
+                                }
+
+                                // 3. Determine Date
+                                let rawDate = appointment.date || appointment.appointment_date || appointment.appointment?.date || appointment.appointmentDate;
+                                let displayDate = "N/A";
+                                if (rawDate) {
+                                    try {
+                                        const d = new Date(rawDate);
+                                        if (!isNaN(d.getTime())) {
+                                            displayDate = d.toLocaleDateString();
+                                        } else {
+                                            displayDate = rawDate;
+                                        }
+                                    } catch (e) {
+                                        displayDate = rawDate;
+                                    }
+                                }
+
+                                // 4. Determine Time
+                                let displayTime = appointment.time || appointment.appointment_time || appointment.appointment?.time || appointment.appointmentTime || "N/A";
+
+                                // 5. Determine Department
+                                let displayDept = appointment.department || appointment.appointment?.department || "General Physician";
+
+                                return (
+                                    <tr key={appointment._id || appointment.id}>
+                                        <td>
+                                            <div className="patient-cell">
+                                                <div className="patient-avatar">
+                                                    {pName.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="patient-details">
+                                                    <div className="patient-name">{pName}</div>
+                                                    <div className="patient-meta" style={{ fontSize: '0.8rem', color: '#666' }}>{pPhone}</div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <div className="patient-name">{appointment.firstName} {appointment.lastName}</div>
+                                        </td>
+                                        <td>
+                                            <div className="date-time-cell">
+                                                <div>{displayDate}</div>
+                                                <div style={{ fontSize: '0.8rem', color: '#666' }}>{displayTime}</div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td>{new Date(appointment.appointmentDate).toLocaleDateString()}</td>
-                                    <td>{appointment.appointmentTime || 'N/A'}</td>
-                                    <td>
-                                        <span className={`status-badge ${getStatusColor(appointment.status)}`}>
-                                            {appointment.status}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button className="action-btn view-btn">View Details</button>
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                        <td>
+                                            <span className={`status-badge ${getStatusColor(appointment.status || '')}`}>
+                                                {appointment.status || 'Pending'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span className="dept-badge" style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', backgroundColor: '#f3f4f6', fontSize: '0.85rem' }}>
+                                                {displayDept}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button className="action-btn view-btn" title="View Details">
+                                                <HiEye />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                             {appointments.length === 0 && (
                                 <tr>
                                     <td colSpan="5" className="empty-state">No appointments found</td>

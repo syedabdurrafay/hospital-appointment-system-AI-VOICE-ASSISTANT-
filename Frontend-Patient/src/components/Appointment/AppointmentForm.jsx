@@ -30,32 +30,32 @@ const AppointmentForm = () => {
 
   // Default mock doctors as fallback
   const mockDoctors = [
-    { 
-      _id: '1', 
+    {
+      _id: '1',
       id: '1',
-      firstName: 'John', 
-      lastName: 'Smith', 
-      specialization: 'General Physician', 
+      firstName: 'John',
+      lastName: 'Smith',
+      specialization: 'General Physician',
       experience: '15',
       workingHours: { start: '09:00', end: '17:00' },
       consultationDuration: 30
     },
-    { 
-      _id: '2', 
+    {
+      _id: '2',
       id: '2',
-      firstName: 'Sarah', 
-      lastName: 'Johnson', 
-      specialization: 'General Physician', 
+      firstName: 'Sarah',
+      lastName: 'Johnson',
+      specialization: 'General Physician',
       experience: '12',
       workingHours: { start: '10:00', end: '18:00' },
       consultationDuration: 30
     },
-    { 
-      _id: '3', 
+    {
+      _id: '3',
       id: '3',
-      firstName: 'Michael', 
-      lastName: 'Brown', 
-      specialization: 'Cardiologist', 
+      firstName: 'Michael',
+      lastName: 'Brown',
+      specialization: 'Cardiologist',
       experience: '20',
       workingHours: { start: '09:00', end: '16:00' },
       consultationDuration: 30
@@ -78,13 +78,11 @@ const AppointmentForm = () => {
   const fetchDoctors = async () => {
     try {
       setFetchingDoctors(true);
-      console.log('Fetching doctors from API...');
-      
+
       const response = await doctorService.getAll();
-      console.log('Doctors API response:', response);
-      
+
       let doctorsList = [];
-      
+
       // Handle different response structures
       if (response && response.success !== false) {
         if (response.doctors && Array.isArray(response.doctors)) {
@@ -93,12 +91,12 @@ const AppointmentForm = () => {
           doctorsList = response;
         }
       }
-      
+
       if (doctorsList.length === 0) {
         console.warn('No doctors found from API, using mock data');
         doctorsList = mockDoctors;
       }
-      
+
       // Ensure each doctor has required fields
       doctorsList = doctorsList.map(doctor => ({
         _id: doctor._id || doctor.id,
@@ -113,10 +111,8 @@ const AppointmentForm = () => {
         description: doctor.description || `Experienced ${doctor.specialization || 'doctor'} with ${doctor.experience || '5'} years of experience.`,
         rating: doctor.rating || '4.5'
       }));
-      
+
       setDoctors(doctorsList);
-      console.log(`Loaded ${doctorsList.length} doctors`);
-      toast.success(`Loaded ${doctorsList.length} doctors`);
     } catch (error) {
       console.error('Error fetching doctors:', error);
       toast.warning('Using fallback doctor data');
@@ -128,26 +124,22 @@ const AppointmentForm = () => {
 
   const fetchAvailableSlots = async () => {
     if (!formData.doctorId || !formData.appointmentDate) return;
-    
+
     setCheckingAvailability(true);
     setAvailableSlots([]);
     setFormData(prev => ({ ...prev, appointmentTime: '' }));
-    
+
     try {
-      console.log(`Fetching slots for doctor ${formData.doctorId} on ${formData.appointmentDate}`);
-      
       const response = await appointmentService.getAvailableSlots(
-        formData.doctorId, 
+        formData.doctorId,
         formData.appointmentDate
       );
-      
-      console.log('Slots API response:', response);
-      
+
       if (response.success && response.available) {
         setAvailableSlots(response.slots || []);
-        
+
         if (response.slots.length === 0) {
-          toast.info('No available slots for this date. Please choose another date or doctor.');
+          toast.info('No available slots for this date. Please choose another date.');
         } else {
           toast.info(`Found ${response.slots.length} available slots`);
         }
@@ -159,7 +151,7 @@ const AppointmentForm = () => {
       console.error('Error fetching available slots:', error);
       toast.error('Failed to check availability. Please try again.');
       setAvailableSlots([]);
-      
+
       // Fallback: Generate time slots
       const generatedSlots = generateTimeSlots();
       setAvailableSlots(generatedSlots);
@@ -172,29 +164,29 @@ const AppointmentForm = () => {
     const selectedDoctor = doctors.find(d => d._id === formData.doctorId);
     const workingHours = selectedDoctor?.workingHours || { start: '09:00', end: '17:00' };
     const duration = selectedDoctor?.consultationDuration || 30;
-    
+
     const slots = [];
     const isToday = formData.appointmentDate === new Date().toISOString().split('T')[0];
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
-    
+
     const [startHour, startMinute] = workingHours.start.split(':').map(Number);
     const [endHour, endMinute] = workingHours.end.split(':').map(Number);
-    
+
     let currentHourSlot = startHour;
     let currentMinuteSlot = startMinute;
-    
+
     while (currentHourSlot < endHour || (currentHourSlot === endHour && currentMinuteSlot < endMinute)) {
       const period = currentHourSlot >= 12 ? 'PM' : 'AM';
       const displayHour = currentHourSlot % 12 || 12;
       const timeString = `${displayHour}:${currentMinuteSlot.toString().padStart(2, '0')} ${period}`;
-      
+
       // If today, only show future slots (with 30 min buffer)
       if (!isToday || (currentHourSlot > currentHour) || (currentHourSlot === currentHour && currentMinuteSlot > currentMinute + 30)) {
         slots.push(timeString);
       }
-      
+
       // Increment by consultation duration
       currentMinuteSlot += duration;
       if (currentMinuteSlot >= 60) {
@@ -202,13 +194,13 @@ const AppointmentForm = () => {
         currentMinuteSlot = currentMinuteSlot % 60;
       }
     }
-    
+
     return slots.slice(0, 12); // Return max 12 slots
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
+
     if (name === 'appointmentDate') {
       setFormData(prev => ({
         ...prev,
@@ -242,7 +234,7 @@ const AppointmentForm = () => {
           dob: 'Date of Birth',
           gender: 'Gender'
         };
-        
+
         for (const field of requiredFields) {
           const value = String(formData[field] || '').trim();
           if (!value) {
@@ -250,21 +242,21 @@ const AppointmentForm = () => {
             return false;
           }
         }
-        
+
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
           toast.error('Please enter a valid email address');
           return false;
         }
-        
+
         // Phone validation
         const phoneRegex = /^\d{10}$/;
         if (!phoneRegex.test(formData.phone)) {
           toast.error('Please enter a valid 10-digit phone number');
           return false;
         }
-        
+
         // Date of birth validation
         const dob = new Date(formData.dob);
         const today = new Date();
@@ -272,7 +264,7 @@ const AppointmentForm = () => {
           toast.error('Please enter a valid date of birth');
           return false;
         }
-        
+
         return true;
       },
       2: () => {
@@ -282,7 +274,7 @@ const AppointmentForm = () => {
           appointmentDate: 'Appointment Date',
           appointmentTime: 'Appointment Time'
         };
-        
+
         for (const field of requiredFields) {
           const value = formData[field];
           if (!value || String(value).trim() === '') {
@@ -290,27 +282,27 @@ const AppointmentForm = () => {
             return false;
           }
         }
-        
+
         // Date validation
         const selectedDate = new Date(formData.appointmentDate);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         if (selectedDate < today) {
           toast.error('Please select a future date');
           return false;
         }
-        
+
         // Check if selected time is in available slots
         if (availableSlots.length > 0 && !availableSlots.includes(formData.appointmentTime)) {
           toast.error('Selected time slot is no longer available. Please choose another time.');
           return false;
         }
-        
+
         return true;
       }
     };
-    
+
     return validations[currentStep] ? validations[currentStep]() : true;
   };
 
@@ -328,7 +320,7 @@ const AppointmentForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateStep()) return;
 
     setLoading(true);
@@ -336,7 +328,7 @@ const AppointmentForm = () => {
     try {
       // Find selected doctor
       const selectedDoctor = doctors.find(d => d._id === formData.doctorId) || mockDoctors[0];
-      
+
       const appointmentData = {
         patient: {
           firstName: formData.firstName,
@@ -360,13 +352,13 @@ const AppointmentForm = () => {
       };
 
       console.log('Submitting appointment:', appointmentData);
-      
+
       // Save appointment via API
       const response = await appointmentService.create(appointmentData);
       console.log('Appointment response:', response);
-      
+
       toast.success(response.message || 'Appointment booked successfully!');
-      
+
       // Redirect to confirmation page
       setTimeout(() => {
         navigate('/appointment-confirmation', {
@@ -387,9 +379,26 @@ const AppointmentForm = () => {
 
     } catch (error) {
       console.error('Appointment booking error:', error);
+
+      // HANDLE DUPLICATE SLOT (409)
+      if (error.response?.data?.errorType === 'SLOT_BOOKED' && error.response.data.availableSlots) {
+        toast.error(error.response.data.message);
+        toast.info(error.response.data.suggestionMessage || "Suggested slots have been updated.");
+
+        // Update slots with suggestions
+        setAvailableSlots(error.response.data.availableSlots);
+
+        // Reset selected time
+        setFormData(prev => ({ ...prev, appointmentTime: '' }));
+
+        // Go back to Step 2
+        setCurrentStep(2);
+        return;
+      }
+
       const errorMessage = error.response?.data?.message || error.message || 'Failed to book appointment. Please try again.';
       toast.error(errorMessage);
-      
+
       // If unauthorized, redirect to login
       if (error.response?.status === 401) {
         setTimeout(() => {
@@ -410,7 +419,7 @@ const AppointmentForm = () => {
         <div className="form-header">
           <h2>Book Your Appointment</h2>
           <p>Fill in your details to schedule an appointment with our expert doctors</p>
-          
+
           {/* Progress Bar */}
           <div className="progress-bar">
             <div className="progress-steps">
@@ -523,7 +532,7 @@ const AppointmentForm = () => {
           {currentStep === 2 && (
             <div className="form-section active">
               <h3 className="section-title">Select Doctor & Appointment Time</h3>
-              
+
               {/* Doctor Selection */}
               <div className="form-group full-width">
                 <label htmlFor="doctorId">Select Doctor *</label>
@@ -553,7 +562,7 @@ const AppointmentForm = () => {
                   <small className="hint error">No doctors available at the moment. Please check back later.</small>
                 )}
               </div>
-              
+
               {/* Doctor Preview Card */}
               {selectedDoctor && (
                 <div className="doctor-preview-card">
@@ -580,7 +589,7 @@ const AppointmentForm = () => {
                   </div>
                 </div>
               )}
-              
+
               {/* Date and Time Selection */}
               <div className="form-grid">
                 <div className="form-group">
@@ -618,8 +627,8 @@ const AppointmentForm = () => {
                       ))
                     ) : (
                       <option value="" disabled>
-                        {formData.doctorId && formData.appointmentDate 
-                          ? 'No slots available for this date' 
+                        {formData.doctorId && formData.appointmentDate
+                          ? 'No slots available for this date'
                           : 'Select doctor and date first'}
                       </option>
                     )}
@@ -636,7 +645,7 @@ const AppointmentForm = () => {
                   )}
                 </div>
               </div>
-              
+
               {/* Availability Status */}
               {formData.doctorId && formData.appointmentDate && !checkingAvailability && (
                 <div className="availability-status">
@@ -696,7 +705,7 @@ const AppointmentForm = () => {
                   Have you visited us before?
                 </label>
               </div>
-              
+
               {/* Summary Section */}
               <div className="appointment-summary">
                 <h4>Appointment Summary</h4>
@@ -743,7 +752,7 @@ const AppointmentForm = () => {
                 </button>
               )}
             </div>
-            
+
             <div className="action-right">
               {currentStep < 3 ? (
                 <button

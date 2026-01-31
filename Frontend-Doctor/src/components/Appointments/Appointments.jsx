@@ -1,11 +1,11 @@
 import { useState, useContext, useEffect } from 'react';
 import { AppContext } from '../../context/AppContext';
-import { 
-  HiCalendar, 
-  HiSearch, 
-  HiPlus, 
-  HiEye, 
-  HiPencil, 
+import {
+  HiCalendar,
+  HiSearch,
+  HiPlus,
+  HiEye,
+  HiPencil,
   HiTrash,
   HiCheckCircle,
   HiXCircle,
@@ -137,45 +137,58 @@ const Appointments = () => {
     try {
       const data = await appointmentService.getAll();
       
+      console.log('API Response:', data); // Debugging
+
       if (!data.success) {
         throw new Error(data.message || t.error);
       }
-      
+
       // Transform the data for the UI
       const list = (data.appointments || []).map((a) => {
-        // Extract patient name
-        const patientName = a.patient?.name || 
-                           `${a.patient?.firstName || ''} ${a.patient?.lastName || ''}`.trim() ||
-                           a.patient_name ||
-                           'Unknown Patient';
-        
+        // Safe extraction
+        const safePatient = a.patient || {};
+        const populatedPatient = a.patientId || {}; 
+        const safeDoctor = a.doctor || {};
+        const appointmentDetails = a.appointment || {};
+
+        // Extract patient name - try populated data first, then embedded
+        const patientName = 
+          (populatedPatient.firstName && populatedPatient.lastName ? `${populatedPatient.firstName} ${populatedPatient.lastName}` : '') ||
+          safePatient.name ||
+          (safePatient.firstName && safePatient.lastName ? `${safePatient.firstName} ${safePatient.lastName}` : '') ||
+          a.patient_name ||
+          'Unknown Patient';
+
         // Extract doctor name
         let doctorName = 'Not Assigned';
-        if (a.doctor?.firstName) {
-          doctorName = `Dr. ${a.doctor.firstName} ${a.doctor.lastName || ''}`;
+        if (safeDoctor.fullName) {
+          doctorName = safeDoctor.fullName;
+        } else if (safeDoctor.firstName) {
+          doctorName = `Dr. ${safeDoctor.firstName} ${safeDoctor.lastName || ''}`;
         } else if (a.doctorName) {
           doctorName = a.doctorName;
         } else if (a.doctorId?.firstName) {
           doctorName = `Dr. ${a.doctorId.firstName} ${a.doctorId.lastName || ''}`;
         }
-        
+
         // Extract date and time
-        const date = a.appointment?.date || a.date || a.appointment_date || '';
-        const time = a.appointment?.time || a.time || a.appointment_time || '';
-        
+        // The controller puts date in a.appointment.date AND a.date
+        const date = appointmentDetails.date || a.date || a.appointment_date || '';
+        const time = appointmentDetails.time || a.time || a.appointment_time || '';
+
         // Get status (ensure lowercase for consistency)
         const status = (a.status || 'pending').toLowerCase();
-        
+
         // Get phone
-        const phone = a.patient?.phone || a.patient_phone || '';
-        
+        const phone = populatedPatient.phone || safePatient.phone || a.patient_phone || '';
+
         // Extract symptoms/reason
-        const symptoms = a.appointment?.symptoms || a.symptoms || '';
-        
+        const symptoms = appointmentDetails.symptoms || a.symptoms || '';
+
         return {
           id: a._id || a.id,
-          patient: { 
-            name: patientName, 
+          patient: {
+            name: patientName,
             phone: phone
           },
           doctor: doctorName,
@@ -186,7 +199,8 @@ const Appointments = () => {
           raw: a
         };
       });
-      
+
+      console.log('Processed List:', list);
       setAppointments(list);
     } catch (err) {
       console.error('Failed to load appointments:', err);
@@ -206,21 +220,21 @@ const Appointments = () => {
   const handleAddAppointment = () => {
     // In a real app, navigate to add appointment form
     console.log('Navigate to add appointment form');
-    // For now, just show a message
     alert('Add appointment form would open here');
   };
 
   const filteredAppointments = appointments.filter(apt => {
     const matchesSearch = apt.patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         apt.doctor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         apt.patient.phone.includes(searchQuery);
-    
+      apt.doctor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      apt.patient.phone.includes(searchQuery);
+
     if (filter === 'all') return matchesSearch;
     if (filter === 'pending') return matchesSearch && apt.status === 'pending';
-    if (filter === 'confirmed' || filter === 'accepted') return matchesSearch && (apt.status === 'confirmed' || apt.status === 'accepted');
-    if (filter === 'cancelled' || filter === 'rejected') return matchesSearch && (apt.status === 'cancelled' || apt.status === 'rejected');
+    // Match both 'confirmed' and 'accepted' to the 'confirmed' filter
+    if (filter === 'confirmed') return matchesSearch && (apt.status === 'confirmed' || apt.status === 'accepted');
+    if (filter === 'cancelled') return matchesSearch && (apt.status === 'cancelled' || apt.status === 'rejected');
     if (filter === 'completed') return matchesSearch && apt.status === 'completed';
-    
+
     return matchesSearch;
   });
 
@@ -233,48 +247,54 @@ const Appointments = () => {
   };
 
   const handleSelectAppointment = (appointmentId) => {
-    setSelectedAppointments(prev => 
-      prev.includes(appointmentId) 
+    setSelectedAppointments(prev =>
+      prev.includes(appointmentId)
         ? prev.filter(id => id !== appointmentId)
         : [...prev, appointmentId]
     );
   };
 
   const handleConfirmAppointment = async (apptId) => {
+    // No longer restricted to 'pending'
     if (!window.confirm(t.confirmAppointment + '?')) return;
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await appointmentService.confirm(apptId);
+      // Optimistic update
+      setAppointments(prev => prev.map(apt =>
+        apt.id === apptId ? { ...apt, status: 'accepted' } : apt
+      ));
       alert(t.appointmentConfirmed);
-      handleRefresh();
     } catch (err) {
       console.error('Confirm error:', err);
       alert(err.message || t.error);
+      handleRefresh(); // Revert on error
     }
   };
 
   const handleRejectAppointment = async (apptId) => {
     if (!window.confirm(t.confirmReject)) return;
-    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Assuming reject API exists or status update to 'Rejected'
+      await appointmentService.updateStatus(apptId, { status: 'Rejected' });
+
+      setAppointments(prev => prev.map(apt =>
+        apt.id === apptId ? { ...apt, status: 'rejected' } : apt
+      ));
       alert(t.appointmentRejected);
-      handleRefresh();
     } catch (err) {
       console.error('Reject error:', err);
       alert(err.message || t.error);
+      handleRefresh();
     }
   };
 
   const handleDeleteAppointment = async (apptId) => {
     if (!window.confirm(t.confirmDelete)) return;
-    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await appointmentService.delete(apptId);
+      setAppointments(prev => prev.filter(apt => apt.id !== apptId));
+      setSelectedAppointments(prev => prev.filter(id => id !== apptId));
       alert(t.appointmentDeleted);
-      handleRefresh();
     } catch (err) {
       console.error('Delete error:', err);
       alert(err.message || t.error);
@@ -282,7 +302,7 @@ const Appointments = () => {
   };
 
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'pending': return 'status-pending';
       case 'confirmed':
       case 'accepted': return 'status-confirmed';
@@ -294,7 +314,7 @@ const Appointments = () => {
   };
 
   const getStatusIcon = (status) => {
-    switch(status) {
+    switch (status) {
       case 'pending': return <HiClock />;
       case 'confirmed':
       case 'accepted': return <HiCheckCircle />;
@@ -308,9 +328,20 @@ const Appointments = () => {
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
     try {
+      // Check if YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
-      
+
       return date.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE', {
         weekday: 'short',
         month: 'short',
@@ -325,7 +356,7 @@ const Appointments = () => {
     const statusMap = {
       'pending': t.pending,
       'confirmed': t.confirmed,
-      'accepted': t.confirmed,
+      'accepted': t.confirmed, // Display Accepted as Confirmed to user
       'cancelled': t.cancelled,
       'rejected': t.cancelled,
       'completed': t.completed
@@ -362,15 +393,15 @@ const Appointments = () => {
           </div>
         </div>
         <div className="header-right">
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             icon={<HiPlus />}
             onClick={handleAddAppointment}
             disabled={refreshing}
           >
             {t.addAppointment}
           </Button>
-          <Button 
+          <Button
             variant="secondary"
             icon={refreshing ? <div className="mini-spinner"></div> : <HiRefresh />}
             onClick={handleRefresh}
@@ -404,8 +435,8 @@ const Appointments = () => {
               disabled={refreshing}
             />
           </div>
-          
-          <button 
+
+          <button
             className="filter-toggle-btn"
             onClick={() => setShowFilters(!showFilters)}
           >
@@ -416,35 +447,35 @@ const Appointments = () => {
         {showFilters && (
           <div className="filter-section">
             <div className="filter-buttons">
-              <button 
+              <button
                 className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
                 onClick={() => setFilter('all')}
                 disabled={refreshing}
               >
                 {t.filterAll}
               </button>
-              <button 
+              <button
                 className={`filter-btn ${filter === 'pending' ? 'active' : ''}`}
                 onClick={() => setFilter('pending')}
                 disabled={refreshing}
               >
                 {t.filterPending}
               </button>
-              <button 
+              <button
                 className={`filter-btn ${filter === 'confirmed' ? 'active' : ''}`}
                 onClick={() => setFilter('confirmed')}
                 disabled={refreshing}
               >
                 {t.filterConfirmed}
               </button>
-              <button 
+              <button
                 className={`filter-btn ${filter === 'cancelled' ? 'active' : ''}`}
                 onClick={() => setFilter('cancelled')}
                 disabled={refreshing}
               >
                 {t.filterCancelled}
               </button>
-              <button 
+              <button
                 className={`filter-btn ${filter === 'completed' ? 'active' : ''}`}
                 onClick={() => setFilter('completed')}
                 disabled={refreshing}
@@ -480,9 +511,9 @@ const Appointments = () => {
               <HiCalendar className="empty-icon" />
               <h3>{t.noAppointments}</h3>
               <p>
-                {searchQuery || filter !== 'all' 
-                  ? (language === 'en' 
-                    ? 'Try adjusting your search or filter' 
+                {searchQuery || filter !== 'all'
+                  ? (language === 'en'
+                    ? 'Try adjusting your search or filter'
                     : 'Versuchen Sie, Ihre Suche oder Filter anzupassen')
                   : (language === 'en'
                     ? 'No appointments scheduled yet'
@@ -504,7 +535,7 @@ const Appointments = () => {
                     disabled={refreshing}
                   />
                 </div>
-                
+
                 <div className="table-cell patient-cell">
                   <div className="patient-info">
                     <HiUser className="patient-icon" />
@@ -519,37 +550,37 @@ const Appointments = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="table-cell doctor-cell">
                   <div className="doctor-info">
                     <div className="doctor-name">{appointment.doctor}</div>
                   </div>
                 </div>
-                
+
                 <div className="table-cell date-cell">
                   <div className="date-display">
                     <HiCalendar className="date-icon" />
                     <span>{formatDate(appointment.date)}</span>
                   </div>
                 </div>
-                
+
                 <div className="table-cell time-cell">
                   <div className="time-display">
                     <span>{appointment.time || 'N/A'}</span>
                   </div>
                 </div>
-                
+
                 <div className="table-cell status-cell">
                   <span className={`status-badge ${getStatusColor(appointment.status)}`}>
                     {getStatusIcon(appointment.status)}
                     {getStatusText(appointment.status)}
                   </span>
                 </div>
-                
+
                 <div className="table-cell actions-cell">
                   <div className="action-buttons">
-                    <button 
-                      className="action-btn view-btn" 
+                    <button
+                      className="action-btn view-btn"
                       title={t.viewDetails}
                       onClick={() => {
                         console.log('View details:', appointment);
@@ -558,30 +589,33 @@ const Appointments = () => {
                     >
                       <HiEye />
                     </button>
-                    
-                    {appointment.status === 'pending' && (
-                      <>
-                        <button 
-                          className="action-btn confirm-btn" 
-                          title={t.confirmAppointment}
-                          onClick={() => handleConfirmAppointment(appointment.id)}
-                          disabled={refreshing}
-                        >
-                          <HiCheckCircle />
-                        </button>
-                        <button 
-                          className="action-btn reject-btn" 
-                          title={t.rejectAppointment}
-                          onClick={() => handleRejectAppointment(appointment.id)}
-                          disabled={refreshing}
-                        >
-                          <HiXCircle />
-                        </button>
-                      </>
+
+                    {/* Show confirm button if NOT already accepted/confirmed/completed */}
+                    {!['accepted', 'confirmed', 'completed'].includes(appointment.status) && (
+                      <button
+                        className="action-btn confirm-btn"
+                        title={t.confirmAppointment}
+                        onClick={() => handleConfirmAppointment(appointment.id)}
+                        disabled={refreshing}
+                      >
+                        <HiCheckCircle />
+                      </button>
                     )}
                     
-                    <button 
-                      className="action-btn delete-btn" 
+                    {/* Show reject button if NOT already rejected/cancelled */}
+                    {!['rejected', 'cancelled', 'completed'].includes(appointment.status) && (
+                      <button
+                        className="action-btn reject-btn"
+                        title={t.rejectAppointment}
+                        onClick={() => handleRejectAppointment(appointment.id)}
+                        disabled={refreshing}
+                      >
+                        <HiXCircle />
+                      </button>
+                    )}
+
+                    <button
+                      className="action-btn delete-btn"
                       title={t.delete}
                       onClick={() => handleDeleteAppointment(appointment.id)}
                       disabled={refreshing}
@@ -604,8 +638,8 @@ const Appointments = () => {
             </span>
           </div>
           <div className="selection-buttons">
-            <Button 
-              variant="danger" 
+            <Button
+              variant="danger"
               size="small"
               icon={<HiTrash />}
               onClick={() => {

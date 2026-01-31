@@ -50,23 +50,20 @@ const Dashboard = () => {
   };
 
   const calculateStats = (appointments) => {
-    // normalize to date-only (local) to avoid timezone issues
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const parseDateOnly = (d) => {
       if (!d) return null;
-      // if already a Date
       if (d instanceof Date) {
         const dt = new Date(d);
-        dt.setHours(0,0,0,0);
+        dt.setHours(0, 0, 0, 0);
         return dt;
       }
-      // try to extract YYYY-MM-DD first
       const match = String(d).match(/(\d{4}-\d{2}-\d{2})/);
       if (match) return new Date(match[1] + 'T00:00:00');
       const dt = new Date(d);
-      if (!isNaN(dt)) { dt.setHours(0,0,0,0); return dt; }
+      if (!isNaN(dt)) { dt.setHours(0, 0, 0, 0); return dt; }
       return null;
     };
 
@@ -74,13 +71,13 @@ const Dashboard = () => {
       const appointmentDate = parseDateOnly(app.appointment_date || app.appointment?.date);
       if (!appointmentDate) return false;
       const status = String(app.status || '').toLowerCase();
-      if (['cancelled','rejected'].includes(status)) return false;
+      if (['cancelled', 'rejected', 'completed', 'done'].includes(status)) return false;
       return appointmentDate.getTime() >= today.getTime();
     }).length;
 
     const completed = appointments.filter(app => {
       const status = String(app.status || '').toLowerCase();
-      return status === 'completed' || status === 'accepted' || status === 'done';
+      return status === 'completed' || status === 'done';
     }).length;
 
     const cancelled = appointments.filter(app => {
@@ -93,20 +90,21 @@ const Dashboard = () => {
 
   const parseDateOnly = (d) => {
     if (!d) return null;
-    if (d instanceof Date) { const dt = new Date(d); dt.setHours(0,0,0,0); return dt; }
+    if (d instanceof Date) { const dt = new Date(d); dt.setHours(0, 0, 0, 0); return dt; }
     const match = String(d).match(/(\d{4}-\d{2}-\d{2})/);
     if (match) return new Date(match[1] + 'T00:00:00');
     const dt = new Date(d);
-    if (!isNaN(dt)) { dt.setHours(0,0,0,0); return dt; }
+    if (!isNaN(dt)) { dt.setHours(0, 0, 0, 0); return dt; }
     return null;
   };
 
   const upcomingAppointments = appointments.filter(app => {
     const appointmentDate = parseDateOnly(app.appointment_date || app.appointment?.date);
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
     const status = String(app.status || '').toLowerCase();
     if (!appointmentDate) return false;
-    if (['cancelled','rejected'].includes(status)) return false;
+    if (['cancelled', 'rejected', 'completed', 'done'].includes(status)) return false;
+    // Show even if older than today if it's still 'pending' or 'confirmed' (missed appointment case could be handled separately)
     return appointmentDate.getTime() >= today.getTime();
   }).sort((a, b) => {
     const da = parseDateOnly(a.appointment_date || a.appointment?.date);
@@ -116,10 +114,13 @@ const Dashboard = () => {
 
   const pastAppointments = appointments.filter(app => {
     const appointmentDate = parseDateOnly(app.appointment_date || app.appointment?.date);
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
     const status = String(app.status || '').toLowerCase();
+
+    // Include completed/cancelled here regardless of date
+    if (['cancelled', 'rejected', 'completed', 'done'].includes(status)) return true;
+
     if (!appointmentDate) return true;
-    if (['cancelled','rejected'].includes(status)) return true;
     return appointmentDate.getTime() < today.getTime();
   }).sort((a, b) => {
     const da = parseDateOnly(a.appointment_date || a.appointment?.date);
@@ -141,10 +142,11 @@ const Dashboard = () => {
           }
           break;
         case 'reschedule':
-          window.location.href = `/appointment/reschedule/${appointmentId}`;
+          window.location.href = `/appointment/reschedule/${appointmentId}`; // Assume this route exists or will exist
           break;
         case 'view':
-          window.location.href = `/appointment/${appointmentId}`;
+          // window.location.href = `/appointment/${appointmentId}`;
+          console.log('View details for', appointmentId);
           break;
         default:
           break;
@@ -152,16 +154,6 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error performing appointment action:', error);
     }
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short',
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    });
   };
 
   const formatTime = (timeString) => {
@@ -188,11 +180,33 @@ const Dashboard = () => {
 
   // AppointmentCard Component
   const AppointmentCard = ({ appointment, type = 'upcoming' }) => {
-    const isCancelled = appointment.status === 'cancelled' || appointment.status === 'Cancelled';
-    const isCompleted = appointment.status === 'completed' || appointment.status === 'Completed';
-    
+    // Normalize status
+    const status = (appointment.status || 'pending').toLowerCase();
+
+    const isCancelled = status === 'cancelled' || status === 'rejected';
+    const isCompleted = status === 'completed' || status === 'done';
+    const isAccepted = status === 'accepted' || status === 'confirmed';
+    const isPending = status === 'pending';
+
+    let statusClass = 'pending';
+    let statusText = 'Pending';
+
+    if (isCancelled) {
+      statusClass = 'cancelled';
+      statusText = 'Cancelled';
+    } else if (isCompleted) {
+      statusClass = 'completed';
+      statusText = 'Completed';
+    } else if (isAccepted) {
+      statusClass = 'confirmed';
+      statusText = 'Confirmed';
+    } else {
+      statusClass = 'pending';
+      statusText = 'Pending';
+    }
+
     return (
-      <div className={`appointment-card ${type} ${isCancelled ? 'cancelled' : ''}`}>
+      <div className={`appointment-card ${type} status-${statusClass}`}>
         <div className="appointment-card-header">
           <div className="appointment-date-badge">
             <span className="date-day">
@@ -203,12 +217,12 @@ const Dashboard = () => {
             </span>
           </div>
           <div className="appointment-status">
-            <span className={`status-badge ${isCancelled ? 'cancelled' : isCompleted ? 'completed' : 'upcoming'}`}>
-              {isCancelled ? 'Cancelled' : isCompleted ? 'Completed' : 'Upcoming'}
+            <span className={`status-badge ${statusClass}`}>
+              {statusText}
             </span>
           </div>
         </div>
-        
+
         <div className="appointment-card-body">
           <h4 className="doctor-name">
             Dr. {appointment.doctor_firstName} {appointment.doctor_lastName}
@@ -216,35 +230,44 @@ const Dashboard = () => {
           <p className="appointment-specialty">
             {appointment.department || 'General Medicine'}
           </p>
-          
+
           <div className="appointment-details">
             <div className="detail-item">
-              <span className="detail-icon">🕒</span>
+              <span className="detail-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+              </span>
               <span className="detail-text">{formatTime(appointment.appointment_time)}</span>
             </div>
             <div className="detail-item">
-              <span className="detail-icon">📍</span>
-              <span className="detail-text">Room {appointment.room || '201'}</span>
+              <span className="detail-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>
+              </span>
+              <span className="detail-text">Room {appointment.room || 'TBD'}</span>
             </div>
             {appointment.reason && (
               <div className="detail-item">
-                <span className="detail-icon">📝</span>
+                <span className="detail-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" /></svg>
+                </span>
                 <span className="detail-text">{appointment.reason}</span>
               </div>
             )}
           </div>
         </div>
-        
+
         <div className="appointment-card-footer">
-          {type === 'upcoming' && !isCancelled && (
+          {type === 'upcoming' && !isCancelled && !isCompleted && (
             <>
-              <button 
+              {/* Only show Reschedule if supported */}
+              {/* 
+              <button
                 className="btn btn-outline"
                 onClick={() => handleAppointmentAction('reschedule', appointment._id)}
               >
                 Reschedule
               </button>
-              <button 
+              */}
+              <button
                 className="btn btn-danger"
                 onClick={() => handleAppointmentAction('cancel', appointment._id)}
               >
@@ -253,7 +276,7 @@ const Dashboard = () => {
             </>
           )}
           {(type === 'past' || isCompleted || isCancelled) && (
-            <button 
+            <button
               className="btn btn-secondary"
               onClick={() => handleAppointmentAction('view', appointment._id)}
             >
@@ -289,12 +312,12 @@ const Dashboard = () => {
   // DashboardSidebar Component
   const DashboardSidebar = () => {
     const navItems = [
-      { id: 'overview', label: 'Overview', icon: '📊' },
-      { id: 'appointments', label: 'Appointments', icon: '📅', badge: upcomingAppointments.length },
-      { id: 'medical', label: 'Medical Records', icon: '📋' },
-      { id: 'prescriptions', label: 'Prescriptions', icon: '💊' },
-      { id: 'billing', label: 'Billing', icon: '💰' },
-      { id: 'settings', label: 'Settings', icon: '⚙️' },
+      { id: 'overview', label: 'Overview', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></svg> },
+      { id: 'appointments', label: 'Appointments', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>, badge: upcomingAppointments.length },
+      { id: 'medical', label: 'Medical Records', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg> },
+      { id: 'prescriptions', label: 'Prescriptions', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7z" /><line x1="8.5" y1="8.5" x2="15.5" y2="15.5" /></svg> },
+      { id: 'billing', label: 'Billing', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg> },
+      { id: 'settings', label: 'Settings', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg> },
     ];
 
     return (
@@ -330,25 +353,32 @@ const Dashboard = () => {
 
         <div className="sidebar-footer">
           <div className="quick-actions">
-            <button 
+            <button
               className="btn btn-primary btn-block"
               onClick={() => window.location.href = '/appointment'}
             >
-              <span className="btn-icon">+</span>
+              <span className="btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
+              </span>
               New Appointment
             </button>
-            <button 
+            <button
               className="btn btn-outline btn-block"
               onClick={() => window.location.href = '/emergency'}
             >
-              <span className="btn-icon">🚨</span>
+              <span className="btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              </span>
               Emergency Contact
             </button>
           </div>
-          
+
           <div className="sidebar-help">
             <p>Need help?</p>
-            <a href="/help" className="help-link">Contact Support</a>
+            <a href="/help" className="help-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+              Contact Support
+            </a>
           </div>
         </div>
       </aside>
@@ -366,28 +396,28 @@ const Dashboard = () => {
         <StatsCard
           title="Upcoming Appointments"
           value={stats.upcoming}
-          icon="📅"
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>}
           color="primary"
           trend={stats.upcoming > 0 ? "+2 this week" : "No appointments"}
         />
         <StatsCard
           title="Completed Visits"
           value={stats.completed}
-          icon="✅"
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
           color="success"
           trend="All time"
         />
         <StatsCard
           title="Cancelled"
           value={stats.cancelled}
-          icon="❌"
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>}
           color="warning"
           trend="Last 30 days"
         />
         <StatsCard
           title="Total Appointments"
           value={stats.total}
-          icon="📊"
+          icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></svg>}
           color="info"
           trend="Since joining"
         />
@@ -398,7 +428,7 @@ const Dashboard = () => {
           <h2>Recent Appointments</h2>
           <button className="view-all btn-link" onClick={() => { setActiveTab('appointments-upcoming'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>View All →</button>
         </div>
-        
+
         {upcomingAppointments.length > 0 ? (
           <div className="activity-list">
             {upcomingAppointments.slice(0, 3).map(appointment => (
@@ -411,7 +441,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <EmptyState
-            icon="📅"
+            icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="64" height="64"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>}
             title="No upcoming appointments"
             message="Schedule your next visit to get started"
             actionText="Book Appointment"
@@ -429,23 +459,25 @@ const Dashboard = () => {
           <h2>Appointments</h2>
           <p className="section-subtitle">Manage your upcoming and past appointments</p>
         </div>
-        <button 
+        <button
           className="btn btn-primary btn-lg"
           onClick={() => window.location.href = '/appointment'}
         >
-          <span className="btn-icon">+</span>
+          <span className="btn-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
+          </span>
           Book New Appointment
         </button>
       </div>
 
       <div className="tabs">
-        <button 
+        <button
           className={`tab ${activeTab === 'appointments-upcoming' ? 'active' : ''}`}
           onClick={() => setActiveTab('appointments-upcoming')}
         >
           Upcoming ({upcomingAppointments.length})
         </button>
-        <button 
+        <button
           className={`tab ${activeTab === 'appointments-past' ? 'active' : ''}`}
           onClick={() => setActiveTab('appointments-past')}
         >
@@ -468,7 +500,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <EmptyState
-                icon="📅"
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="64" height="64"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>}
                 title="No upcoming appointments"
                 message="Schedule your next visit to get started"
                 actionText="Book Appointment"
@@ -490,7 +522,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <EmptyState
-                icon="📋"
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="64" height="64"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>}
                 title="No past appointments"
                 message="Your appointment history will appear here"
               />
@@ -510,7 +542,9 @@ const Dashboard = () => {
         </div>
       </div>
       <div className="placeholder-content">
-        <div className="placeholder-icon">📋</div>
+        <div className="placeholder-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="80" height="80"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
+        </div>
         <h3>Medical Records</h3>
         <p>This feature is currently in development and will be available soon.</p>
       </div>
@@ -526,7 +560,9 @@ const Dashboard = () => {
         </div>
       </div>
       <div className="placeholder-content">
-        <div className="placeholder-icon">💊</div>
+        <div className="placeholder-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="80" height="80"><path d="M10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7z" /><line x1="8.5" y1="8.5" x2="15.5" y2="15.5" /></svg>
+        </div>
         <h3>Prescriptions</h3>
         <p>Your prescription history will be available here shortly.</p>
       </div>
@@ -542,7 +578,9 @@ const Dashboard = () => {
         </div>
       </div>
       <div className="placeholder-content">
-        <div className="placeholder-icon">💰</div>
+        <div className="placeholder-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="80" height="80"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+        </div>
         <h3>Billing Information</h3>
         <p>Billing features will be implemented in the next update.</p>
       </div>
@@ -559,19 +597,25 @@ const Dashboard = () => {
       </div>
       <div className="settings-grid">
         <div className="settings-card">
-          <div className="settings-icon">👤</div>
+          <div className="settings-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+          </div>
           <h4>Personal Information</h4>
           <p>Update your contact details and personal info</p>
           <button className="btn btn-outline">Edit Profile</button>
         </div>
         <div className="settings-card">
-          <div className="settings-icon">🔒</div>
+          <div className="settings-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+          </div>
           <h4>Security</h4>
           <p>Change password and security settings</p>
           <button className="btn btn-outline">Update Security</button>
         </div>
         <div className="settings-card">
-          <div className="settings-icon">🔔</div>
+          <div className="settings-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+          </div>
           <h4>Notifications</h4>
           <p>Manage your notification preferences</p>
           <button className="btn btn-outline">Configure</button>
@@ -593,7 +637,7 @@ const Dashboard = () => {
     <div className="dashboard-container">
       <div className="dashboard-layout">
         <DashboardSidebar />
-        
+
         <main className="dashboard-main">
           {activeTab === 'overview' && renderOverview()}
           {(activeTab === 'appointments' || activeTab === 'appointments-upcoming' || activeTab === 'appointments-past') && renderAppointments()}
