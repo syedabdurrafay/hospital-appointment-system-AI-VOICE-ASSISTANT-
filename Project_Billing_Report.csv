@@ -1,0 +1,14 @@
+Feature Name,Description,Time (Hours),Cost (USD),Status
+User Authentication,Secure JWT-based auth for Admin; Doctor; and Patient roles including encryption,12,600,Completed
+Admin Dashboard,Centralized statistics; system overview; and administrative controls,16,800,Completed
+Doctor Management,Advanced CRUD for doctor profiles; specialties; and schedules,10,500,Completed
+Patient Management,Comprehensive patient records; history tracking; and personal dashboards,14,700,Completed
+Appointment System,Full booking workflow with real-time status management,20,1000,Completed
+AI Voice Assistant,Voice-activated appointment booking and intelligent query handling,24,1200,Completed
+Real-time Notifications,Automated system alerts and appointment updates for users,8,400,Completed
+Database Architecture,Cloud-based MongoDB Atlas integration for secure scalable data storage,6,300,Completed
+Responsive UI Designs,Three distinct high-performance web portals optimized for all devices,30,1500,Completed
+Messaging System,Direct patient-to-admin communication and contact management,6,300,Completed
+Patient Data Import,High-efficiency bulk import tool for legacy patient data,8,400,Completed
+Audit & Security,Action logging for compliance and enhanced API security layers,6,300,Completed
+Total,,160,8000,
