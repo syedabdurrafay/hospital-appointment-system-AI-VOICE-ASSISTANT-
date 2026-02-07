@@ -21,22 +21,29 @@ config();
 const allowedOrigins = [
     process.env.FRONTEND_PATIENT,
     process.env.FRONTEND_ADMIN,
+    'https://hospital-appointment-system-ai-voice-assistant-production.up.railway.app',
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:8080',
-    'http://localhost:5000' // Add backend itself
+    'http://localhost:5000'
 ].filter(Boolean);
 
 console.log('Allowed CORS origins:', allowedOrigins);
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
+        // Allow requests with no origin (like mobile apps, curl, or same-origin)
         if (!origin) return callback(null, true);
 
-        // Check if origin is in allowed list
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        // Normalize origin for comparison
+        const normalizedOrigin = origin.toLowerCase();
+
+        // Check if origin is in allowed list or is the production backend itself
+        const isAllowed = allowedOrigins.some(o => o && o.toLowerCase() === normalizedOrigin);
+        const isSameDomain = normalizedOrigin.includes('railway.app');
+
+        if (isAllowed || isSameDomain) {
             callback(null, true);
         } else {
             console.log('CORS blocked origin:', origin);

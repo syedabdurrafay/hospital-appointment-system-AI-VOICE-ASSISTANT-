@@ -18,8 +18,13 @@ export const errorMiddleware = (err, req, res, next) => {
     err.message = err.message || 'Internal Server Error';
     err.statusCode = err.statusCode || 500;
 
+    if (err.message === 'Not allowed by CORS') {
+        err = new ErrorHandler('Not allowed by CORS origin policy', 403);
+    }
+
     if (err.code === 11000) {
-        const message = `Duplicate ${Object.keys(err.keyValue)} Entered`
+        const field = err.keyValue ? Object.keys(err.keyValue) : 'Field';
+        const message = `Duplicate ${field} Entered`
         err = new ErrorHandler(message, 400)
     }
     if (err.name === "JsonWebTokenError") {

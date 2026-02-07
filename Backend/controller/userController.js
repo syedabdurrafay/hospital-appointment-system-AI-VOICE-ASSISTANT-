@@ -36,6 +36,7 @@ export const patientRegister = catchAsyncErrors(async (req, res, next) => {
 
 export const login = catchAsyncErrors(async (req, res, next) => {
   const { email, password, role } = req.body;
+  console.log(`Login attempt: email=${email}, role=${role}`);
 
   if (!email || !password || !role) {
     return next(new ErrorHandler("Please provide email, password and role", 400));
