@@ -29,12 +29,18 @@ export const isAdminAuthenticated = catchAsyncErrors(async (req, res, next) => {
     }
     try {
         req.user = await User.findById(decoded.id);
+        if (!req.user) {
+            console.error('Auth middleware: User not found in DB', { userId: decoded.id });
+            return next(new ErrorHandler('User not found', 401));
+        }
     } catch (dbError) {
-        return next(new ErrorHandler('Invalid user identifier in token', 401));
+        console.error('Auth middleware: DB Error finding user', dbError);
+        return next(new ErrorHandler('Internal server error during authentication', 500));
     }
+
     console.debug('Auth middleware: authenticated user', { userId: decoded.id, role: req.user?.role });
 
-    if (!req.user || req.user.role !== "Admin") {
+    if (req.user.role !== "Admin") {
         return next(new ErrorHandler("Admin access only", 403));
     }
 
@@ -60,9 +66,18 @@ export const isPatientAuthenticated = catchAsyncErrors(async (req, res, next) =>
     } catch (e) {
         return next(new ErrorHandler('Invalid or expired token', 401));
     }
-    req.user = await User.findById(decoded.id);
+    try {
+        req.user = await User.findById(decoded.id);
+        if (!req.user) {
+            console.error('Auth middleware: Patient not found in DB', { userId: decoded.id });
+            return next(new ErrorHandler('User not found', 401));
+        }
+    } catch (dbError) {
+        console.error('Auth middleware: DB Error finding patient', dbError);
+        return next(new ErrorHandler('Internal server error during authentication', 500));
+    }
 
-    if (!req.user || req.user.role !== "Patient") {
+    if (req.user.role !== "Patient") {
         return next(new ErrorHandler("Patient access only", 403));
     }
 
@@ -90,11 +105,16 @@ export const isDoctorAuthenticated = catchAsyncErrors(async (req, res, next) => 
     }
     try {
         req.user = await User.findById(decoded.id);
+        if (!req.user) {
+            console.error('Auth middleware: Doctor not found in DB', { userId: decoded.id });
+            return next(new ErrorHandler('User not found', 401));
+        }
     } catch (dbError) {
-        return next(new ErrorHandler('Invalid user identifier in token', 401));
+        console.error('Auth middleware: DB Error finding doctor', dbError);
+        return next(new ErrorHandler('Internal server error during authentication', 500));
     }
 
-    if (!req.user || req.user.role !== "Doctor") {
+    if (req.user.role !== "Doctor") {
         return next(new ErrorHandler("Doctor access only", 403));
     }
 
@@ -122,12 +142,16 @@ export const isAdminOrDoctorAuthenticated = catchAsyncErrors(async (req, res, ne
     }
     try {
         req.user = await User.findById(decoded.id);
+        if (!req.user) {
+            console.error('Auth middleware (multi): User not found in DB', { userId: decoded.id });
+            return next(new ErrorHandler('User not found', 401));
+        }
     } catch (dbError) {
-        console.error('Auth middleware: DB Error finding user', dbError);
-        return next(new ErrorHandler('Invalid user identifier in token', 401));
+        console.error('Auth middleware (multi): DB Error finding user', dbError);
+        return next(new ErrorHandler('Internal server error during authentication', 500));
     }
 
-    if (!req.user || (req.user.role !== "Admin" && req.user.role !== "Doctor")) {
+    if (req.user.role !== "Admin" && req.user.role !== "Doctor") {
         return next(new ErrorHandler("Unauthorized access", 403));
     }
 

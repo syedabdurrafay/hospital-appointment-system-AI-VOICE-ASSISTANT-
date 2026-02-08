@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use Vite env or default to backend v1 base URL
-const API_URL = (import.meta.env && import.meta.env.VITE_API_URL) || 'http://localhost:5000/api/v1';
+const API_URL = (import.meta.env && import.meta.env.VITE_API_URL) || 'https://hospital-appointment-system-ai-voice-assistant-production.up.railway.app/api/v1';
 
 const api = axios.create({
   baseURL: API_URL,

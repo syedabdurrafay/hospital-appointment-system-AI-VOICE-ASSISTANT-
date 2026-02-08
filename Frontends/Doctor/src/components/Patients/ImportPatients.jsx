@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import API from '../../services/api';
 import './ImportPatients.css';
 
 const ImportPatients = () => {
@@ -37,18 +37,10 @@ const ImportPatients = () => {
             const formData = new FormData();
             formData.append('file', selectedFile);
 
-            const token = localStorage.getItem('adminToken') || document.cookie
-                .split('; ')
-                .find(row => row.startsWith('adminToken='))
-                ?.split('=')[1];
-
-            const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-            const response = await axios.post(`${apiUrl}/api/v1/user/patient/import`, formData, {
+            const response = await API.post('/user/patient/import', formData, {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': `Bearer ${token}`
-                },
-                withCredentials: true
+                    'Content-Type': 'multipart/form-data'
+                }
             });
 
             if (response.data.success) {
@@ -69,17 +61,7 @@ const ImportPatients = () => {
 
     const downloadTemplate = async () => {
         try {
-            const token = localStorage.getItem('adminToken') || document.cookie
-                .split('; ')
-                .find(row => row.startsWith('adminToken='))
-                ?.split('=')[1];
-
-            const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-            const response = await axios.get(`${apiUrl}/api/v1/user/patient/import/template`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                withCredentials: true,
+            const response = await API.get('/user/patient/import/template', {
                 responseType: 'blob'
             });
 

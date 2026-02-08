@@ -22,6 +22,7 @@ const allowedOrigins = [
     process.env.FRONTEND_PATIENT,
     process.env.FRONTEND_ADMIN,
     'https://hospital-appointment-system-ai-voice-assistant-production.up.railway.app',
+    'https://lucid-bravery-production-6ba6.up.railway.app', // Frontend URL provided by user
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5174',

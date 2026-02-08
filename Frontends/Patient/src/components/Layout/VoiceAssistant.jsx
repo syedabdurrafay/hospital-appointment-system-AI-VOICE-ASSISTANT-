@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import './VoiceAssistant.css';
 
@@ -83,10 +83,9 @@ const VoiceAssistant = () => {
 
     try {
       // Call backend AI endpoint
-      const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      console.log('📡 Calling API:', `${apiUrl}/api/v1/ai/chat`);
+      console.log('📡 Calling AI Chat API');
 
-      const response = await axios.post(`${apiUrl}/api/v1/ai/chat`, {
+      const response = await api.post('/ai/chat', {
         message: command,
         history: conversationHistory,
         context: {

@@ -2,6 +2,7 @@ import { catchAsyncErrors } from "../middlewares/catchAsyncErrors.js";
 import ErrorHandler from "../middlewares/errorMiddleware.js";
 import { User } from "../models/userSchema.js";
 import cloudinary from "cloudinary";
+import { generateToken } from "../utils/jwtToken.js";
 
 export const patientRegister = catchAsyncErrors(async (req, res, next) => {
   const { firstName, lastName, email, phone, dob, gender, password, aadhar } = req.body;
@@ -15,6 +16,8 @@ export const patientRegister = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("User already registered!", 400));
   }
 
+  console.log(`Registering patient: email=${email}`);
+
   const user = await User.create({
     firstName,
     lastName,
@@ -27,11 +30,10 @@ export const patientRegister = catchAsyncErrors(async (req, res, next) => {
     role: "Patient",
   });
 
-  res.status(200).json({
-    success: true,
-    message: "Patient registered successfully!",
-    user,
-  });
+  console.log(`Patient registered successfully: ${user._id}`);
+
+  // Use generateToken to log in the user immediately and send token + user
+  generateToken(user, "Patient registered successfully!", 200, res);
 });
 
 export const login = catchAsyncErrors(async (req, res, next) => {
@@ -56,34 +58,8 @@ export const login = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler(`User with provided role (${role}) not found`, 400));
   }
 
-  const token = user.generateJsonWebToken();
-
-  // Set cookie based on role
-  const cookieName = role === "Admin" ? "adminToken" : "token";
-  res
-    .status(200)
-    .cookie(cookieName, token, {
-      expires: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-    })
-    .json({
-      success: true,
-      message: `Logged in as ${role}`,
-      token,
-      user: {
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        specialization: user.specialization,
-        experience: user.experience,
-        qualification: user.qualification,
-      },
-    });
+  // Use generateToken helper for consistent cookie and response handling
+  generateToken(user, `Logged in as ${role}`, 200, res);
 });
 
 export const addNewAdmin = catchAsyncErrors(async (req, res, next) => {
@@ -267,11 +243,14 @@ export const getAllDoctors = catchAsyncErrors(async (req, res, next) => {
   }
 });
 
+// Universal get user details endpoint
 export const getUserDetails = catchAsyncErrors(async (req, res, next) => {
-  const user = req.user;
+  if (!req.user) {
+    return next(new ErrorHandler("User not found in request", 404));
+  }
   res.status(200).json({
     success: true,
-    user,
+    user: req.user,
   });
 });
 
@@ -300,6 +279,20 @@ export const logoutPatient = catchAsyncErrors(async (req, res, next) => {
     .json({
       success: true,
       message: "Patient logged out successfully",
+    });
+});
+
+export const logoutDoctor = catchAsyncErrors(async (req, res, next) => {
+  res
+    .status(200)
+    .clearCookie("doctorToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    })
+    .json({
+      success: true,
+      message: "Doctor logged out successfully",
     });
 });
 
