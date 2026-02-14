@@ -2,10 +2,7 @@ import axios from 'axios';
 
 // Determine the API base URL
 const getBaseURL = () => {
-  if (import.meta.env.DEV) {
-    return import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-  }
-  return import.meta.env.VITE_API_URL || '/api/v1';
+  return import.meta.env.VITE_API_URL || 'https://hospital-appointment-system-ai-voice-assistant-production.up.railway.app/api/v1';
 };
 
 const API = axios.create({
@@ -14,7 +11,7 @@ const API = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 30000,
 });
 
 // Request interceptor
@@ -33,7 +30,7 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('adminToken');
+      localStorage.removeItem('doctorToken');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -64,10 +61,6 @@ export const appointmentService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching appointments:', error);
-
-      console.error('Error fetching appointments:', error);
-      throw error;
-
       throw error;
     }
   },
@@ -259,7 +252,7 @@ export const userService = {
   },
 
   getCurrentUser: async () => {
-    const response = await API.get('/user/admin/me');
+    const response = await API.get('/user/doctor/me');
     return response.data;
   },
 
@@ -273,7 +266,7 @@ export const userService = {
   },
 
   logout: async () => {
-    const response = await API.get('/user/admin/logout');
+    const response = await API.get('/user/doctor/logout');
     return response.data;
   },
 

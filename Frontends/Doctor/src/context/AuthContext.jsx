@@ -15,20 +15,21 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('doctorToken');
       if (token) {
-        const userData = await userService.getCurrentUser();
-        if (userData && userData.role === 'Admin') {
+        const response = await userService.getCurrentUser();
+        const userData = response.user;
+        if (userData && userData.role === 'Doctor') {
           setUser(userData);
           setIsAuthenticated(true);
         } else {
-          // Not an admin, clear token
-          localStorage.removeItem('adminToken');
+          // Not a doctor, clear token
+          localStorage.removeItem('doctorToken');
         }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('adminToken');
+      localStorage.removeItem('doctorToken');
     } finally {
       setLoading(false);
     }
@@ -38,15 +39,15 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await userService.login(email, password);
-      
-      if (response.success && response.user.role === 'Admin') {
+
+      if (response.success && response.user.role === 'Doctor') {
         setUser(response.user);
         setIsAuthenticated(true);
-        localStorage.setItem('adminToken', response.token);
+        localStorage.setItem('doctorToken', response.token);
         toast.success('Login successful!');
         return { success: true };
       } else {
-        throw new Error('Invalid admin credentials');
+        throw new Error('Invalid doctor credentials');
       }
     } catch (error) {
       const message = error.response?.data?.message || error.message || 'Login failed';
@@ -65,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setUser(null);
       setIsAuthenticated(false);
-      localStorage.removeItem('adminToken');
+      localStorage.removeItem('doctorToken');
       toast.success('Logged out successfully');
     }
   };

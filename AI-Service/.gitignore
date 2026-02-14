@@ -1,0 +1,5 @@
+.env
+AI-Service/.env
+node_modules/
+venv/
+__pycache__/

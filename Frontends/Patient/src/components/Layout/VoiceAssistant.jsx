@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import './VoiceAssistant.css';
 
@@ -11,23 +11,55 @@ const VoiceAssistant = () => {
   const [response, setResponse] = useState('');
   const [isVisible, setIsVisible] = useState(false);
   const [conversationHistory, setConversationHistory] = useState([]);
+  const [identifiedPatient, setIdentifiedPatient] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const recognitionRef = useRef(null);
-  const synthRef = useRef(null);
+  const synthRef = useRef(window.speechSynthesis);
+
+  // Fallback voice loader
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      console.log("🔊 Voices loaded:", voices.length);
+    };
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
 
   useEffect(() => {
     // Initialize Speech Recognition
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'en-US';
 
+      recognitionRef.current.onstart = () => {
+        setIsListening(true);
+      };
+
       recognitionRef.current.onresult = (event) => {
-        const currentTranscript = event.results[0][0].transcript;
-        setTranscript(currentTranscript);
-        processVoiceCommand(currentTranscript);
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        if (finalTranscript) {
+          setTranscript(finalTranscript);
+          processVoiceCommand(finalTranscript);
+          recognitionRef.current.stop();
+        } else if (interimTranscript) {
+          setTranscript(interimTranscript);
+        }
       };
 
       recognitionRef.current.onend = () => {
@@ -38,7 +70,10 @@ const VoiceAssistant = () => {
         console.error('Speech recognition error', event.error);
         setIsListening(false);
         if (event.error === 'no-speech') {
-          speak("I didn't hear anything. Please try again.");
+          setResponse("I didn't hear anything. Please click 'Start Listening' and speak again.");
+          // No auto-speak here to avoid loop if background noise is frequent
+        } else if (event.error === 'not-allowed') {
+          alert("Microphone access denied. Please allow microphone permissions.");
         }
       };
     } else {
@@ -75,33 +110,40 @@ const VoiceAssistant = () => {
       setIsListening(false);
     }
   };
-
   const processVoiceCommand = async (command) => {
     setIsProcessing(true);
 
     console.log('🎤 Processing voice command:', command);
 
     try {
-      // Call backend AI endpoint
-      const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      console.log('📡 Calling API:', `${apiUrl}/api/v1/ai/chat`);
+      // Call backend AI endpoint (New Python-backed endpoint)
+      console.log('📡 Calling AI Process-Voice API');
 
-      const response = await axios.post(`${apiUrl}/api/v1/ai/chat`, {
-        message: command,
+      const res = await api.post('/ai/process-voice', {
+        text: command,
+        patientId: user?._id || identifiedPatient?.id || null,
         history: conversationHistory,
-        context: {
-          user: user || null
-        }
       });
 
-      console.log('✅ API Response:', response.data);
+      console.log('✅ API Response:', res.data);
 
-      if (response.data.success) {
-        const aiResponse = response.data.response;
+      if (res.data.success) {
+        const { structuredData, doctorSummary, conversation, bookingResult } = res.data;
+
+        // Use the AI's conversational response if available, otherwise construct one
+        const aiResponse = conversation && conversation.length > 1
+          ? conversation[conversation.length - 1].content
+          : (bookingResult?.success ? bookingResult.message : "I've processed your request.");
+
         setResponse(aiResponse);
 
+        // Store identified patient if returned in booking result
+        if (bookingResult?.patientId) {
+          setIdentifiedPatient({ id: bookingResult.patientId });
+        }
+
         // Update conversation history
-        setConversationHistory(response.data.conversationHistory || [
+        setConversationHistory(conversation || [
           ...conversationHistory,
           { role: 'user', content: command },
           { role: 'assistant', content: aiResponse }
@@ -109,8 +151,12 @@ const VoiceAssistant = () => {
 
         // Speak the response
         speak(aiResponse);
+
+        if (bookingResult && bookingResult.success) {
+          console.log('📅 Appointment Booked:', bookingResult);
+        }
       } else {
-        const errorMsg = response.data.message || "I'm sorry, I couldn't process that. Please try again.";
+        const errorMsg = res.data.message || "I'm sorry, I couldn't process that. Please try again.";
         console.error('❌ API returned error:', errorMsg);
         setResponse(errorMsg);
         speak(errorMsg);
@@ -143,41 +189,47 @@ const VoiceAssistant = () => {
   };
 
   const speak = (text) => {
-    if (synthRef.current) {
-      // Cancel any ongoing speech
-      synthRef.current.cancel();
+    if (!text || !window.speechSynthesis) return;
 
-      setIsSpeaking(true);
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
+    console.log("🔊 AI speaking:", text);
 
-      // Select a pleasant voice if available
-      const voices = synthRef.current.getVoices();
-      const preferredVoice = voices.find(voice =>
-        voice.name.includes('Female') || voice.name.includes('Samantha') || voice.name.includes('Google')
-      );
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
 
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        // Auto-restart listening after AI finishes speaking
-        if (isVisible) {
-          setTimeout(() => {
-            startListening();
-          }, 500);
-        }
-      };
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
 
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-      };
+    // Select a pleasant voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(voice =>
+      voice.name.includes('Google US English') ||
+      voice.name.includes('Female') ||
+      voice.name.includes('Samantha') ||
+      voice.name.includes('Google') ||
+      voice.lang.startsWith('en')
+    );
 
-      synthRef.current.speak(utterance);
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
     }
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+    };
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      console.log("🔊 Speech finished");
+    };
+
+    utterance.onerror = (err) => {
+      console.error("🔊 Speech synthesis error:", err);
+      setIsSpeaking(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
   };
 
   const toggleAssistant = () => {
@@ -185,15 +237,15 @@ const VoiceAssistant = () => {
       setIsVisible(true);
       // Greet the user when opening
       setTimeout(() => {
-        const greeting = user ? `Hello ${user.firstName}! I'm your AI hospital assistant. How can I help you today?` : "Hello! I'm your AI hospital assistant. How can I help you today?";
+        const greeting = user ? `Hello ${user.firstName}! I'm your AI Clinic Receptionist. How can I help you book an appointment today?` : "Hello! I'm your AI Clinic Receptionist. How can I help you book an appointment today?";
         setResponse(greeting);
         speak(greeting);
       }, 300);
     } else {
       setIsVisible(false);
       stopListening();
-      if (synthRef.current) {
-        synthRef.current.cancel();
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
       setIsSpeaking(false);
     }
@@ -203,14 +255,14 @@ const VoiceAssistant = () => {
     setConversationHistory([]);
     setTranscript('');
     setResponse('');
-    const msg = "Conversation reset. How can I help you?";
+    const msg = "Conversation reset. How can I help you with your clinic booking?";
     setResponse(msg);
     speak(msg);
   };
 
   return (
     <>
-      <button className="voice-assistant-toggle" onClick={toggleAssistant} title="AI Voice Assistant">
+      <button className="voice-assistant-toggle" onClick={toggleAssistant} title="AI Clinic Assistant">
         <span className="assistant-icon">🎙️</span>
         {isListening && <span className="pulse-ring"></span>}
       </button>
@@ -218,7 +270,7 @@ const VoiceAssistant = () => {
       {isVisible && (
         <div className="voice-assistant-container">
           <div className="assistant-header">
-            <h3>🏥 AI Hospital Assistant</h3>
+            <h3>🏥 AI Clinic Assistant</h3>
             <div className="header-actions">
               <button className="reset-btn" onClick={resetConversation} title="Reset conversation">
                 🔄
@@ -262,9 +314,9 @@ const VoiceAssistant = () => {
             <div className="quick-commands">
               <h4>Try saying:</h4>
               <div className="commands-list">
-                <span>"I need to book an appointment"</span>
-                <span>"Check available slots"</span>
-                <span>"Book for tomorrow"</span>
+                <span onClick={() => processVoiceCommand("I am Anna Meier, DOB 12.03.1985. I need to book an appointment.")}>"I'm [Name], DOB [Date]. I need to book..."</span>
+                <span onClick={() => processVoiceCommand("Which doctors are available tomorrow?")}>"Which doctors are available tomorrow?"</span>
+                <span onClick={() => processVoiceCommand("Book an appointment with Dr. Schmidt for next Monday at 10 AM")}>"Book with Dr. X for [Date] at [Time]"</span>
               </div>
             </div>
 

@@ -17,7 +17,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = localStorage.getItem('adminToken');
       if (token) {
-        const userData = await userService.getCurrentUser();
+        const response = await userService.getCurrentUser();
+        const userData = response.user;
         if (userData && userData.role === 'Admin') {
           setUser(userData);
           setIsAuthenticated(true);
@@ -38,7 +39,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await userService.login(email, password);
-      
+
       if (response.success && response.user.role === 'Admin') {
         setUser(response.user);
         setIsAuthenticated(true);

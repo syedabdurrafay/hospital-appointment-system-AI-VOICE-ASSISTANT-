@@ -3,7 +3,7 @@
 }
 
 .doctors-hero {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
   color: white;
   padding: 100px 0;
   text-align: center;
@@ -52,8 +52,8 @@
 
 .search-box input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 .search-icon {
@@ -133,7 +133,7 @@
 .doctor-image {
   height: 200px;
   position: relative;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -172,11 +172,11 @@
 .doctor-info h3 {
   font-size: 24px;
   margin-bottom: 5px;
-  color: #1a237e;
+  color: #0f172a;
 }
 
 .specialization {
-  color: #667eea;
+  color: #4f46e5;
   font-weight: 600;
   font-size: 16px;
   margin-bottom: 20px;
@@ -242,14 +242,16 @@
   width: 40px;
   height: 40px;
   border: 4px solid #e2e8f0;
-  border-top-color: #667eea;
+  border-top-color: #4f46e5;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 20px;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-state {
@@ -265,7 +267,7 @@
 
 .empty-state h3 {
   font-size: 24px;
-  color: #1a237e;
+  color: #0f172a;
   margin-bottom: 10px;
 }
 
@@ -286,7 +288,7 @@
 .cta-content h2 {
   font-size: 36px;
   margin-bottom: 15px;
-  color: #1a237e;
+  color: #0f172a;
 }
 
 .cta-content p {
@@ -312,20 +314,20 @@
   .doctors-hero h1 {
     font-size: 36px;
   }
-  
+
   .doctors-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .doctor-actions {
     flex-direction: column;
   }
-  
+
   .cta-actions {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .department-filters {
     overflow-x: auto;
     padding-bottom: 10px;
@@ -337,11 +339,11 @@
   .doctor-info {
     padding: 30px 20px 20px;
   }
-  
+
   .doctors-hero {
     padding: 60px 0;
   }
-  
+
   .doctors-hero h1 {
     font-size: 28px;
   }

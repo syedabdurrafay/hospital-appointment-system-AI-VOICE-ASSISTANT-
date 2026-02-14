@@ -2,10 +2,7 @@ import axios from 'axios';
 
 // Determine the API base URL
 const getBaseURL = () => {
-  if (import.meta.env.DEV) {
-    return import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-  }
-  return import.meta.env.VITE_API_URL || '/api/v1';
+  return import.meta.env.VITE_API_URL || 'https://hospital-appointment-system-ai-voice-assistant-production.up.railway.app/api/v1';
 };
 
 const API = axios.create({
@@ -14,7 +11,7 @@ const API = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // timeout: 10000,
+  timeout: 30000,
 });
 
 // Request interceptor
@@ -63,8 +60,6 @@ export const appointmentService = {
       console.log('Appointments fetched successfully:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error fetching appointments:', error);
-
       console.error('Error fetching appointments:', error);
       throw error;
     }

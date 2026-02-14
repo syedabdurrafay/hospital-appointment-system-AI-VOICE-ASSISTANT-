@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use Vite env or default to backend v1 base URL
-const API_URL = (import.meta.env && import.meta.env.VITE_API_URL) || 'http://localhost:5000/api/v1';
+const API_URL = (import.meta.env && import.meta.env.VITE_API_URL) || 'https://hospital-appointment-system-ai-voice-assistant-production.up.railway.app/api/v1';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -9,7 +9,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
-  // timeout: 10000,
+  timeout: 30000,
 });
 
 // Request interceptor
@@ -88,7 +88,7 @@ export const appointmentService = {
       },
       doctorId: appointmentData.doctorId || appointmentData.appointment?.doctorId
     };
-    
+
     console.log('Sending appointment data:', normalizedData);
     const response = await api.post('/appointment/post', normalizedData);
     return response.data;
@@ -113,17 +113,17 @@ export const appointmentService = {
     const response = await api.delete(`/appointment/delete/${id}`);
     return response.data;
   },
-  
+
   cancel: async (id) => {
     const response = await api.put(`/appointment/cancel/${id}`);
     return response.data;
   },
-  
+
   stats: async () => {
     const response = await api.get('/appointment/stats/me');
     return response.data;
   },
-  
+
   // Get available slots endpoint
   getAvailableSlots: async (doctorId, date) => {
     try {
@@ -141,11 +141,11 @@ export const doctorService = {
     try {
       // Try multiple endpoints
       const endpoints = ['/user/alldoctors', '/user/doctors'];
-      
+
       for (const endpoint of endpoints) {
         try {
           const response = await api.get(endpoint);
-          
+
           if (response.data && response.data.doctors && Array.isArray(response.data.doctors)) {
             return { success: true, doctors: response.data.doctors };
           } else if (response.data && Array.isArray(response.data)) {
@@ -155,24 +155,24 @@ export const doctorService = {
           console.log(`Endpoint ${endpoint} failed, trying next...`);
         }
       }
-      
+
       // Fallback to mock data if all endpoints fail
       console.warn('All doctor endpoints failed, using mock data');
-      return { 
-        success: false, 
+      return {
+        success: false,
         doctors: getMockDoctors(),
         message: 'Using mock data - API endpoints failed'
       };
     } catch (error) {
       console.error('Error fetching doctors:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         doctors: getMockDoctors(),
         message: error.message || 'Failed to fetch doctors'
       };
     }
   },
-  
+
   getById: async (id) => {
     try {
       const response = await api.get(`/user/doctors/${id}`);
@@ -189,11 +189,11 @@ export const doctorService = {
 // Mock doctors data
 const getMockDoctors = () => {
   return [
-    { 
-      _id: '1', 
+    {
+      _id: '1',
       id: '1',
-      firstName: 'John', 
-      lastName: 'Smith', 
+      firstName: 'John',
+      lastName: 'Smith',
       specialization: 'General Physician',
       experience: '15',
       qualification: 'MD, MBBS',
@@ -204,11 +204,11 @@ const getMockDoctors = () => {
       consultationDuration: 30,
       doctDptmnt: 'General Physician'
     },
-    { 
-      _id: '2', 
+    {
+      _id: '2',
       id: '2',
-      firstName: 'Sarah', 
-      lastName: 'Johnson', 
+      firstName: 'Sarah',
+      lastName: 'Johnson',
       specialization: 'General Physician',
       experience: '12',
       qualification: 'MD, MBBS',

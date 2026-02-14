@@ -49,6 +49,22 @@
    npm run dev
    ```
 
+3. **AI Service Setup (Python)**
+   
+   The voice assistant relies on a Python microservice for advanced natural language processing.
+   
+   **Install Dependencies:**
+   ```bash
+   cd AI-Service
+   pip install -r requirements.txt
+   ```
+   
+   **Run the Service:**
+   ```bash
+   python main.py
+   ```
+   *The service will start on http://localhost:8000*
+
 ### Frontend Setup
 
 **Patient Frontend:**
