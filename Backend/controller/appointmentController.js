@@ -6,7 +6,7 @@ import { Notification } from "../models/notificationSchema.js";
 import { logAdminAction } from "../utils/audit.js";
 
 // Helper: Get available time slots for a doctor on a specific date
-export const getAvailableSlots = async (doctorId, date, duration = 30) => {
+export const getAvailableSlots = async (doctorId, date, duration = 30, referenceTime = new Date()) => {
     try {
         const appointments = await Appointment.find({
             doctorId,
@@ -53,7 +53,22 @@ export const getAvailableSlots = async (doctorId, date, duration = 30) => {
             return time;
         }).filter(Boolean);
 
-        const availableSlots = slots.filter(slot => !bookedSlots.includes(slot));
+        let availableSlots = slots.filter(slot => !bookedSlots.includes(slot));
+
+        // FILTER OUT PAST SLOTS IF DATE IS TODAY
+        const refDate = new Date(referenceTime);
+        const todayStr = refDate.toLocaleDateString('en-CA'); // YYYY-MM-DD in the refDate's local time
+        if (date === todayStr) {
+            const currentH = refDate.getHours();
+            const currentM = refDate.getMinutes();
+
+            availableSlots = availableSlots.filter(slot => {
+                const [h, m] = slot.split(':').map(Number);
+                if (h > currentH) return true;
+                if (h === currentH && m > currentM + 10) return true; // 10 min buffer
+                return false;
+            });
+        }
 
         return availableSlots;
     } catch (error) {
@@ -230,52 +245,66 @@ export const getAppointmentSlots = catchAsyncErrors(async (req, res, next) => {
 // Create a new appointment with availability check
 export const postAppointment = catchAsyncErrors(async (req, res, next) => {
     console.log('POST /appointment/post called');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
 
-    // Normalize request body
+    // Normalize request body - Handle AI voice assistant format
     let payload = req.body;
     let patientData = {};
     let appointmentData = {};
     let doctorId = null;
 
-    // Handle different payload structures
+    // Handle AI voice assistant format (from createAppointment function)
     if (payload.patient && payload.appointment) {
+        // Format from AI controller
         patientData = payload.patient;
         appointmentData = payload.appointment;
-        doctorId = payload.doctorId || payload.appointment?.doctorId;
-    } else {
+        doctorId = payload.doctorId;
+
+        console.log('📱 AI Voice Assistant format detected');
+    }
+    // Handle nested format
+    else if (payload.patient && payload.appointment && payload.doctorId) {
+        patientData = payload.patient;
+        appointmentData = payload.appointment;
+        doctorId = payload.doctorId;
+    }
+    // Handle standard format
+    else {
         patientData = {
-            firstName: payload.firstName || req.user?.firstName || '',
-            lastName: payload.lastName || req.user?.lastName || '',
-            email: payload.email || req.user?.email || '',
-            phone: payload.phone || req.user?.phone || '',
-            dob: payload.dob || req.user?.dob || '',
-            gender: payload.gender || req.user?.gender || ''
+            firstName: payload.firstName || req.user?.firstName || payload.patient?.firstName || '',
+            lastName: payload.lastName || req.user?.lastName || payload.patient?.lastName || '',
+            email: payload.email || req.user?.email || payload.patient?.email || '',
+            phone: payload.phone || req.user?.phone || payload.patient?.phone || '',
+            dob: payload.dob || req.user?.dob || payload.patient?.dob || '',
+            gender: payload.gender || req.user?.gender || payload.patient?.gender || '',
+            aadhar: payload.aadhar || payload.patient?.aadhar || ''
         };
 
         appointmentData = {
-            date: payload.appointment_date || payload.date || payload.appointment?.date,
-            time: payload.appointment_time || payload.time || payload.appointment?.time,
+            date: payload.appointment_date || payload.date || payload.appointment?.date || payload.appointment_date,
+            time: payload.appointment_time || payload.time || payload.appointment?.time || payload.appointment_time,
             department: payload.department || payload.appointment?.department || 'General Physician',
-            symptoms: payload.symptoms || payload.appointment?.symptoms || '',
+            symptoms: payload.symptoms || payload.appointment?.symptoms || payload.reason || 'Voice appointment request',
             emergencyContact: payload.emergencyContact || payload.appointment?.emergencyContact || '',
             hasVisited: payload.hasVisited || payload.appointment?.hasVisited || false,
             insuranceProvider: payload.insuranceProvider || payload.insurance || payload.appointment?.insuranceProvider || ''
         };
 
-        doctorId = payload.doctorId || payload.appointment?.doctorId;
+        doctorId = payload.doctorId || payload.appointment?.doctorId || payload.doctor_id;
     }
 
     // Validate required fields
     const missingFields = [];
     if (!patientData.firstName) missingFields.push('firstName');
     if (!patientData.lastName) missingFields.push('lastName');
-    if (!patientData.email) missingFields.push('email');
-    if (!patientData.phone) missingFields.push('phone');
+    if (!patientData.email && !req.user?.email) missingFields.push('email');
+    if (!patientData.phone && !req.user?.phone) missingFields.push('phone');
     if (!appointmentData.date) missingFields.push('date');
     if (!appointmentData.time) missingFields.push('time');
     if (!appointmentData.department) missingFields.push('department');
 
     if (missingFields.length > 0) {
+        console.log('❌ Missing fields:', missingFields);
         return next(new ErrorHandler(`Missing required fields: ${missingFields.join(', ')}`, 400));
     }
 
@@ -291,19 +320,38 @@ export const postAppointment = catchAsyncErrors(async (req, res, next) => {
 
     // Convert time to 24-hour format for checking availability
     let time24Format = appointmentData.time;
-    if (time24Format.includes(' ')) {
+    if (time24Format && time24Format.includes(' ')) {
         const [timePart, period] = time24Format.split(' ');
         let [hours, minutes] = timePart.split(':').map(Number);
         if (period === 'PM' && hours !== 12) hours += 12;
         if (period === 'AM' && hours === 12) hours = 0;
         time24Format = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    } else if (time24Format && time24Format.includes(':')) {
+        // Already in 24-hour format?
+        const [hours, minutes] = time24Format.split(':').map(Number);
+        if (hours < 24 && minutes < 60) {
+            time24Format = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        }
     }
 
     // Check slot availability
     const availableSlots = await getAvailableSlots(doctorId, appointmentData.date);
-    if (!availableSlots.includes(time24Format)) {
-        // SUGGEST SLOTS
-        console.log(`Slot ${time24Format} is taken. Returning suggestions.`);
+
+    // If time is in 12-hour format with AM/PM, convert for comparison
+    let slotToCheck = time24Format;
+    if (appointmentData.time.includes(' ')) {
+        const [timePart, period] = appointmentData.time.split(' ');
+        let [hours, minutes] = timePart.split(':').map(Number);
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        slotToCheck = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+
+    console.log(`Checking slot ${slotToCheck} against available slots:`, availableSlots);
+
+    if (!availableSlots.includes(slotToCheck)) {
+        // Suggest alternative slots
+        console.log(`Slot ${slotToCheck} is taken. Returning suggestions.`);
         const formattedSlots = availableSlots.map(slot => {
             const [hours, minutes] = slot.split(':').map(Number);
             const period = hours >= 12 ? 'PM' : 'AM';
@@ -326,26 +374,82 @@ export const postAppointment = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler(availability.reason || 'Doctor not available for this date', 400));
     }
 
-    const patientId = req.user?._id;
+    // Get patient ID (either from authenticated user or from patient data lookup)
+    let patientId = req.user?._id;
+
+    // If not authenticated, try to find patient by email or name/dob
+    if (!patientId && patientData.email) {
+        const existingPatient = await User.findOne({
+            email: patientData.email,
+            role: 'Patient'
+        });
+        if (existingPatient) {
+            patientId = existingPatient._id;
+            console.log(`✅ Found existing patient by email: ${patientData.email}`);
+        }
+    }
+
+    // If still no patientId, create a new patient? 
+    // Note: For security, we should require authentication, but for voice demo we might allow
+    if (!patientId && process.env.NODE_ENV === 'development') {
+        // In development, we can create a temporary patient
+        console.log('⚠️ No patient ID found, creating temporary patient record');
+        const tempPatient = await User.create({
+            firstName: patientData.firstName,
+            lastName: patientData.lastName,
+            email: patientData.email || `temp_${Date.now()}@example.com`,
+            phone: patientData.phone || '0000000000',
+            dob: patientData.dob || '2000-01-01',
+            gender: patientData.gender || 'Other',
+            role: 'Patient',
+            password: 'TempPass123!', // This should be handled more securely
+            isActive: true
+        });
+        patientId = tempPatient._id;
+        console.log(`✅ Created temporary patient: ${tempPatient._id}`);
+    }
+
     if (!patientId) {
-        return next(new ErrorHandler('Patient authentication required', 401));
+        return next(new ErrorHandler('Patient authentication required or patient not found', 401));
     }
 
     try {
-        const appointment = await Appointment.create({
-            patient: patientData,
-            appointment: appointmentData,
-            doctorId,
+        // Ensure all required fields are present
+        const appointmentPayload = {
+            patient: {
+                firstName: patientData.firstName,
+                lastName: patientData.lastName,
+                email: patientData.email || req.user?.email || '',
+                phone: patientData.phone || req.user?.phone || '',
+                dob: patientData.dob || req.user?.dob || '',
+                gender: patientData.gender || req.user?.gender || 'Other',
+                aadhar: patientData.aadhar || req.user?.aadhar || ''
+            },
+            appointment: {
+                date: appointmentData.date,
+                time: appointmentData.time, // Keep original format for display
+                department: appointmentData.department || doctor.specialization || 'General',
+                symptoms: appointmentData.symptoms || 'Voice appointment request',
+                emergencyContact: appointmentData.emergencyContact || '',
+                hasVisited: false,
+                insuranceProvider: appointmentData.insuranceProvider || ''
+            },
+            doctorId: doctor._id,
             doctor: {
                 firstName: doctor.firstName,
                 lastName: doctor.lastName,
                 specialization: doctor.specialization || doctor.doctrDptmnt || 'General Physician'
             },
-            patientId,
-            status: "Pending"
-        });
+            patientId: patientId,
+            status: "Accepted", // Auto-accept for voice assistant
+            source: "voice_assistant"
+        };
 
-        console.log('Appointment created successfully:', appointment._id);
+        console.log('📝 Creating appointment with payload:', JSON.stringify(appointmentPayload, null, 2));
+
+        const appointment = await Appointment.create(appointmentPayload);
+
+        console.log('✅ Appointment created successfully:', appointment._id);
 
         // Create notifications
         const notifications = [];
@@ -355,11 +459,11 @@ export const postAppointment = catchAsyncErrors(async (req, res, next) => {
         notifications.push(...admins.map(admin =>
             Notification.create({
                 userId: admin._id,
-                title: 'New Appointment Request',
-                body: `New appointment requested by ${patientData.firstName} ${patientData.lastName} for ${appointmentData.date} at ${appointmentData.time}`,
+                title: 'New Voice Appointment Booked',
+                body: `AI Assistant booked ${patientData.firstName} ${patientData.lastName} with ${doctor.firstName} ${doctor.lastName} for ${appointmentData.date} at ${appointmentData.time}`,
                 data: {
                     appointmentId: appointment._id,
-                    type: 'appointment_created',
+                    type: 'voice_appointment_created',
                     patientName: `${patientData.firstName} ${patientData.lastName}`,
                     date: appointmentData.date,
                     time: appointmentData.time
@@ -371,12 +475,29 @@ export const postAppointment = catchAsyncErrors(async (req, res, next) => {
         notifications.push(
             Notification.create({
                 userId: patientId,
-                title: 'Appointment Request Submitted',
-                body: `Your appointment request for ${appointmentData.date} at ${appointmentData.time} has been received and is pending confirmation.`,
+                title: 'Appointment Confirmed via Voice Assistant',
+                body: `Your appointment with Dr. ${doctor.lastName} is confirmed for ${appointmentData.date} at ${appointmentData.time}.`,
                 data: {
                     appointmentId: appointment._id,
-                    type: 'appointment_confirmation',
-                    status: 'pending'
+                    type: 'appointment_confirmed',
+                    status: 'Accepted',
+                    source: 'voice_assistant'
+                }
+            })
+        );
+
+        // Notify doctor
+        notifications.push(
+            Notification.create({
+                userId: doctor._id,
+                title: 'New Voice Appointment',
+                body: `New patient: ${patientData.firstName} ${patientData.lastName} scheduled for ${appointmentData.date} at ${appointmentData.time} via voice assistant.`,
+                data: {
+                    appointmentId: appointment._id,
+                    type: 'doctor_new_appointment',
+                    patientName: `${patientData.firstName} ${patientData.lastName}`,
+                    date: appointmentData.date,
+                    time: appointmentData.time
                 }
             })
         );
@@ -385,9 +506,14 @@ export const postAppointment = catchAsyncErrors(async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            message: 'Appointment submitted successfully! It is now pending confirmation.',
+            message: `Appointment confirmed successfully! Your visit with Dr. ${doctor.lastName} is scheduled for ${appointmentData.date} at ${appointmentData.time}.`,
             appointment,
-            appointmentNumber: `APT-${appointment._id.toString().substring(18, 24).toUpperCase()}`
+            appointmentNumber: `APT-${appointment._id.toString().substring(18, 24).toUpperCase()}`,
+            details: {
+                doctor: `Dr. ${doctor.firstName} ${doctor.lastName}`,
+                when: `${appointmentData.date} at ${appointmentData.time}`,
+                department: appointmentData.department
+            }
         });
 
     } catch (error) {
@@ -412,7 +538,7 @@ export const getAllAppointments = catchAsyncErrors(async (req, res, next) => {
 
         const appointments = await Appointment.find(query)
             .populate('doctorId', 'firstName lastName email specialization doctDptmnt')
-            .populate('patientId', 'firstName lastName email phone dob gender') // Populate more patient info
+            .populate('patientId', 'firstName lastName email phone dob gender')
             .sort({ createdAt: -1 });
 
         console.log(`Found ${appointments.length} appointments`);
@@ -496,7 +622,8 @@ export const getAllAppointments = catchAsyncErrors(async (req, res, next) => {
                 time: appointment.appointment?.time || '',
                 appointment_date: appointment.appointment?.date || '',
                 appointment_time: appointment.appointment?.time || '',
-                duration: '30 min'
+                duration: '30 min',
+                source: appointment.source || 'web'
             };
         });
 

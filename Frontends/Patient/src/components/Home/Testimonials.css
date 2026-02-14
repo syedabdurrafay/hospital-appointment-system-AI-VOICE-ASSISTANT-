@@ -11,7 +11,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
+  background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
 }
 
 .testimonials-section .section-header {
@@ -21,7 +21,7 @@
 
 .testimonials-section h2 {
   font-size: 40px;
-  color: #0d47a1;
+  color: #0f172a;
   margin-bottom: 16px;
   font-weight: 600;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -37,12 +37,12 @@
   transform: translateX(-50%);
   width: 60px;
   height: 3px;
-  background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   border-radius: 2px;
 }
 
 .testimonials-section p {
-  color: #607d8b;
+  color: #64748b;
   font-size: 18px;
   max-width: 600px;
   margin: 24px auto 0;
@@ -62,7 +62,7 @@
   padding: 40px 30px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid #e3f2fd;
+  border: 1px solid #e2e8f0;
   position: relative;
   overflow: hidden;
 }
@@ -70,7 +70,7 @@
 .testimonial-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
-  border-color: #bbdefb;
+  border-color: #c7d2fe;
 }
 
 .quote-mark {
@@ -78,7 +78,7 @@
   top: 20px;
   right: 30px;
   font-size: 80px;
-  color: #e3f2fd;
+  color: #f1f5f9;
   line-height: 1;
   font-family: Georgia, serif;
 }
@@ -90,7 +90,7 @@
 }
 
 .testimonial-content p {
-  color: #455a64;
+  color: #475569;
   line-height: 1.8;
   font-size: 16px;
   margin: 0;
@@ -105,7 +105,7 @@
 }
 
 .star {
-  color: #ffb400;
+  color: #f59e0b;
   font-size: 20px;
   line-height: 1;
 }
@@ -114,7 +114,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  border-top: 1px solid #e3f2fd;
+  border-top: 1px solid #e2e8f0;
   padding-top: 20px;
   margin-top: 20px;
 }
@@ -122,7 +122,7 @@
 .patient-avatar {
   width: 56px;
   height: 56px;
-  background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -135,13 +135,13 @@
 
 .patient-info h4 {
   font-size: 18px;
-  color: #0d47a1;
+  color: #0f172a;
   margin-bottom: 4px;
   font-weight: 600;
 }
 
 .patient-info p {
-  color: #607d8b;
+  color: #64748b;
   font-size: 14px;
   margin: 0;
   font-weight: 400;
@@ -158,19 +158,19 @@
     grid-template-columns: 1fr;
     gap: 25px;
   }
-  
+
   .testimonial-card {
     padding: 30px 25px;
   }
-  
+
   .testimonials-section h2 {
     font-size: 32px;
   }
-  
+
   .testimonials-section p {
     font-size: 16px;
   }
-  
+
   .testimonial-content p {
     font-size: 15px;
   }
@@ -180,11 +180,11 @@
   .testimonials-section {
     padding: 60px 0;
   }
-  
+
   .testimonial-card {
     padding: 25px 20px;
   }
-  
+
   .quote-mark {
     font-size: 60px;
     top: 15px;

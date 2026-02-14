@@ -12,9 +12,9 @@
 .form-header h2 {
   font-size: 42px;
   font-weight: 800;
-  color: #1a237e;
+  color: #0f172a;
   margin-bottom: 15px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -65,9 +65,9 @@
 }
 
 .step.active .step-number {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
   color: white;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
   transform: scale(1.1);
 }
 
@@ -79,7 +79,7 @@
 }
 
 .step.active .step-label {
-  color: #1a237e;
+  color: #0f172a;
 }
 
 .progress-line {
@@ -97,7 +97,7 @@
   left: 0;
   width: 0;
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
   transition: width 0.3s ease;
 }
 
@@ -119,7 +119,7 @@
   .appointment-form {
     padding: 30px 20px;
   }
-  
+
   .form-header h2 {
     font-size: 32px;
   }
@@ -138,7 +138,7 @@
 .section-title {
   font-size: 24px;
   font-weight: 700;
-  color: #1a237e;
+  color: #0f172a;
   margin-bottom: 30px;
   padding-bottom: 15px;
   border-bottom: 2px solid #f1f5f9;
@@ -152,7 +152,7 @@
   left: 0;
   width: 60px;
   height: 2px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
 }
 
 .form-grid {
@@ -204,8 +204,8 @@
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
 }
 
 .form-group input::placeholder,
@@ -253,8 +253,8 @@
 }
 
 .form-check input[type="checkbox"]:checked {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+  border-color: #4f46e5;
 }
 
 .form-check input[type="checkbox"]:checked::after {
@@ -290,7 +290,7 @@
     flex-direction: column;
     gap: 15px;
   }
-  
+
   .form-actions button {
     width: 100%;
   }
@@ -309,7 +309,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
@@ -317,6 +319,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -344,16 +347,16 @@
 }
 
 .time-slot:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #4f46e5;
+  color: #4f46e5;
   transform: translateY(-2px);
 }
 
 .time-slot.selected {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
   color: white;
-  border-color: #667eea;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  border-color: #4f46e5;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
 }
 
 .time-slot.disabled {
@@ -362,20 +365,20 @@
   cursor: not-allowed;
   border-color: #e2e8f0;
 }
-/* AppointmentForm.css - Add these styles */
 
+/* Availability Status */
 .checking {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #666;
+  color: #64748b;
 }
 
 .spinner-small {
   width: 16px;
   height: 16px;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #3498db;
+  border: 2px solid #e2e8f0;
+  border-top: 2px solid #4f46e5;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -384,22 +387,22 @@
   margin-top: 20px;
   padding: 15px;
   border-radius: 8px;
-  background: #f8f9fa;
-  border-left: 4px solid #ddd;
+  background: #f8fafc;
+  border-left: 4px solid #cbd5e1;
 }
 
 .status-available {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #28a745;
+  color: #10b981;
 }
 
 .status-unavailable {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #dc3545;
+  color: #ef4444;
 }
 
 .status-icon {
@@ -411,7 +414,7 @@
   align-items: center;
   gap: 15px;
   padding: 15px;
-  background: #f8f9fa;
+  background: #f8fafc;
   border-radius: 8px;
   margin-top: 10px;
 }
@@ -420,7 +423,7 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: #3498db;
+  background: #4f46e5;
   color: white;
   display: flex;
   align-items: center;
@@ -435,26 +438,22 @@
 
 .doctor-details h5 {
   margin: 0 0 5px 0;
-  color: #333;
+  color: #0f172a;
 }
 
 .doctor-details p {
   margin: 0;
   font-size: 14px;
-  color: #666;
+  color: #64748b;
 }
 
 .specialty {
   font-weight: 500;
-  color: #3498db !important;
+  color: #4f46e5 !important;
 }
 
-.experience, .availability {
+.experience,
+.availability {
   font-size: 13px !important;
-  color: #777 !important;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  color: #64748b !important;
 }
